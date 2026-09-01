@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar Savings Calculator</title>
+<meta name="description" content="See what solar would save on your power bill — system size, install cost, annual savings and payback, worked out on real New Zealand figures.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<div class="app">
+  <header class="masthead">
+    <div class="brand" id="brand"></div>
+    <a class="masthead-phone" id="masthead-phone" href="#"></a>
+  </header>
+  <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <!-- The question flow -->
+  <div class="stage" id="stage">
+    <aside class="rail">
+      <p class="eyebrow rail-title">Your details</p>
+      <ul class="rail-list" id="rail"></ul>
+    </aside>
+    <main class="panel" id="panel"></main>
+  </div>
+
+  <!-- The results, once they've handed over their details -->
+  <div id="results" hidden></div>
+</div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/nz-data.js"></script>
+<script src="assets/js/calculator.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

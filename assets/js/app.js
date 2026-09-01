@@ -1,0 +1,816 @@
+/* ============================================================================
+   THE PAGE. Runs the question flow, then draws the results.
+   Reads everything it needs from config.js — no client details live in here.
+   ============================================================================ */
+
+(function () {
+  "use strict";
+
+  const CFG = window.SOLAR_CONFIG;
+  const answers = {};
+  let stepIndex = 0;
+  let submitted = false;
+
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  /* --- Formatting ---------------------------------------------------------- */
+  const money = n => "$" + Math.round(n).toLocaleString("en-NZ");
+  const moneyRange = (a, b) => money(a) + "–" + money(b);
+  const pct = n => Math.round(n * 100) + "%";
+  const years = n => (n >= 25 || n == null) ? "25+ years" :
+                     (n < 10 ? n.toFixed(1) : Math.round(n)) + " years";
+
+  /* --- Brand: paint the client's colour over the design tokens ------------- */
+  function applyBrand() {
+    const s = document.createElement("style");
+    s.textContent =
+      ":root{--brand:" + CFG.brand.accent + ";--brand-wash:" +
+        CFG.brand.accent + "1A;}" +
+      "@media (prefers-color-scheme: dark){:root:not([data-theme='light']){--brand:" +
+        CFG.brand.accentDark + ";--brand-wash:" + CFG.brand.accentDark + "26;}}" +
+      ":root[data-theme='dark']{--brand:" + CFG.brand.accentDark +
+        ";--brand-wash:" + CFG.brand.accentDark + "26;}";
+    document.head.appendChild(s);
+  }
+
+  function renderMasthead() {
+    const brand = $("brand");
+    brand.innerHTML = "";
+    if (CFG.client.logoUrl) {
+      const img = el("img");
+      img.src = CFG.client.logoUrl;
+      img.alt = CFG.client.name;
+      // If the logo 404s, fall back to the name rather than showing a broken image.
+      img.onerror = () => { img.remove(); brand.prepend(nameBlock()); };
+      brand.appendChild(img);
+    } else {
+      brand.appendChild(nameBlock());
+    }
+    const phone = $("masthead-phone");
+    if (CFG.client.phone) {
+      phone.textContent = CFG.client.phone;
+      phone.href = "tel:" + CFG.client.phone.replace(/\s/g, "");
+    } else {
+      phone.hidden = true;
+    }
+  }
+  function nameBlock() {
+    const w = el("div");
+    w.appendChild(el("div", "brand-name", CFG.client.name));
+    if (CFG.client.tagline) w.appendChild(el("div", "brand-tag", CFG.client.tagline));
+    return w;
+  }
+
+  /* ==========================================================================
+     THE QUESTIONS
+     Each step knows how to draw itself and what to write into the rail.
+     ========================================================================== */
+
+  const STEPS = [
+    {
+      id: "monthlyBill",
+      question: "What's your power bill in a normal month?",
+      why: "This is the single most important number. Everything else — system size, savings, payback — is worked back from it.",
+      railLabel: "Power bill",
+      railValue: v => money(v) + "/month",
+      render: renderBill
+    },
+    {
+      id: "region",
+      question: "Whereabouts in New Zealand are you?",
+      why: "Sunshine hours vary a lot across the country, and that changes how much power the same panels make.",
+      railLabel: "Region",
+      railValue: v => (window.NZ_REGIONS.find(r => r.id === v) || {}).name || v,
+      skip: () => CFG.region.lockToDefault,
+      render: s => renderOptions(s, window.NZ_REGIONS.map(r => ({ value: r.id, label: r.name })))
+    },
+    {
+      id: "orientation",
+      question: "Which way does your roof face?",
+      why: "North catches the most sun in New Zealand. East–west still works well. South is the hard one.",
+      railLabel: "Roof",
+      railValue: v => ({ north: "North facing", eastWest: "East–west", south: "South facing", unsure: "Not sure yet" })[v],
+      render: s => renderOptions(s, [
+        { value: "north",    label: "Mostly north",   note: "The best case here" },
+        { value: "eastWest", label: "East and west",  note: "Very common, works well" },
+        { value: "south",    label: "Mostly south",   note: "Harder, but not a dead end" },
+        { value: "unsure",   label: "I'm not sure",   note: "We'll assume a typical roof" }
+      ], "two-up")
+    },
+    {
+      id: "ownership",
+      question: "Do you own the home?",
+      why: "It decides what finance you can get — and whether solar is your call to make at all.",
+      railLabel: "Ownership",
+      railValue: v => ({ mortgage: "Own, with mortgage", outright: "Own outright", renting: "Renting" })[v],
+      render: s => renderOptions(s, [
+        { value: "mortgage", label: "Yes, with a mortgage", note: "May open up a low-rate green loan" },
+        { value: "outright", label: "Yes, owned outright",  note: "No mortgage on it" },
+        { value: "renting",  label: "No, I rent",           note: "" }
+      ])
+    },
+    {
+      id: "bank",
+      question: "Who's your mortgage with?",
+      why: "Every solar green loan in New Zealand is a top-up on an existing mortgage with that same bank. So the answer here decides whether you get one at all.",
+      railLabel: "Bank",
+      railValue: v => (window.NZ_GREEN_LOANS[v] || {}).bank || v,
+      // Counted in the total until we know they don't need it, so the
+      // question count never grows on someone mid-flow.
+      skip: () => answers.ownership != null && answers.ownership !== "mortgage",
+      render: s => renderOptions(s, [
+        { value: "anz",      label: "ANZ" },
+        { value: "asb",      label: "ASB" },
+        { value: "bnz",      label: "BNZ" },
+        { value: "westpac",  label: "Westpac" },
+        { value: "kiwibank", label: "Kiwibank" },
+        { value: "other",    label: "Another bank" }
+      ], "two-up")
+    },
+    {
+      id: "equity",
+      question: "Roughly how much equity do you have?",
+      why: "Green loans generally need about 20% equity. We'd rather tell you that now than have a bank tell you later.",
+      railLabel: "Equity",
+      railValue: v => ({ "20plus": "20% or more", under20: "Under 20%", unsure: "Not sure" })[v],
+      skip: () => answers.ownership != null && answers.ownership !== "mortgage",
+      render: s => renderOptions(s, [
+        { value: "20plus",  label: "20% or more",  note: "The usual threshold" },
+        { value: "under20", label: "Less than 20%" },
+        { value: "unsure",  label: "Not sure" }
+      ])
+    },
+    {
+      id: "occupancy",
+      question: "Is anyone usually home during the day?",
+      why: "Power you use as the panels make it is worth about 27c a unit. Power you export is worth about 17c. So this changes the numbers more than almost anything else.",
+      railLabel: "Daytime",
+      railValue: v => ({ home: "Home during day", mixed: "Sometimes home", out: "Out during day" })[v],
+      render: s => renderOptions(s, [
+        { value: "home",  label: "Usually someone home", note: "Shift work, working from home, retired, young family" },
+        { value: "mixed", label: "Some days",            note: "A mix through the week" },
+        { value: "out",   label: "Usually out",          note: "Out at work weekdays" }
+      ])
+    },
+    {
+      id: "contact",
+      question: "Where should we send it?",
+      why: "Your results are on the next screen either way — this is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
+      render: renderContact
+    }
+  ];
+
+  const liveSteps = () => STEPS.filter(s => !(s.skip && s.skip()));
+
+  /* --- Rail: the answers so far, as meter readings ------------------------- */
+  function renderRail() {
+    const rail = $("rail");
+    rail.innerHTML = "";
+    const recorded = STEPS.filter(s =>
+      s.railLabel && answers[s.id] != null && !(s.skip && s.skip())
+    );
+
+    if (!recorded.length) {
+      const li = el("li", "rail-empty",
+        "Seven questions. No address, no roof scan, no phone call — a real estimate at the end of it.");
+      rail.appendChild(li);
+      return;
+    }
+    recorded.forEach(s => {
+      const li = el("li", "rail-item");
+      li.appendChild(el("span", "rail-label", s.railLabel));
+      li.appendChild(el("span", "rail-value", s.railValue(answers[s.id])));
+      rail.appendChild(li);
+    });
+  }
+
+  /* --- Draw the current step ----------------------------------------------- */
+  function render() {
+    const steps = liveSteps();
+    const step = steps[stepIndex];
+    const panel = $("panel");
+    panel.innerHTML = "";
+
+    $("progress-fill").style.width = ((stepIndex / steps.length) * 100) + "%";
+
+    const wrap = el("div", "question");
+    wrap.appendChild(el("p", "eyebrow", "Question " + (stepIndex + 1) + " of " + steps.length));
+    const h = el("h2", null, step.question);
+    wrap.appendChild(h);
+    if (step.why) wrap.appendChild(el("p", "question-why", step.why));
+    panel.appendChild(wrap);
+
+    step.render(step, wrap);
+    renderRail();
+    h.setAttribute("tabindex", "-1");
+    if (stepIndex > 0) h.focus({ preventScroll: true });
+    reportHeight();
+  }
+
+  function advance() {
+    // Renting is a graceful dead end — they can't authorise an install.
+    if (answers.ownership === "renting") return renderRenterExit();
+    const steps = liveSteps();
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); }
+  }
+  function back() { if (stepIndex > 0) { stepIndex--; render(); } }
+
+  /* --- Option list ---------------------------------------------------------- */
+  function renderOptions(step, options, layout) {
+    const list = el("div", "options" + (layout ? " " + layout : ""));
+    options.forEach((opt, i) => {
+      const b = el("button", "option");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(answers[step.id] === opt.value));
+      b.appendChild(el("span", "option-key", String(i + 1)));
+      const body = el("div", "option-body");
+      body.appendChild(el("span", "option-label", opt.label));
+      if (opt.note) body.appendChild(el("span", "option-note", opt.note));
+      b.appendChild(body);
+      b.addEventListener("click", () => {
+        answers[step.id] = opt.value;
+        // Changing ownership invalidates the finance answers behind it.
+        if (step.id === "ownership" && opt.value !== "mortgage") {
+          delete answers.bank; delete answers.equity;
+        }
+        list.querySelectorAll(".option").forEach(o => o.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        renderRail();
+        setTimeout(advance, 140);
+      });
+      list.appendChild(b);
+    });
+    step.__panel = list;
+    $("panel").querySelector(".question").appendChild(list);
+    if (stepIndex > 0) addBack();
+  }
+
+  /* --- Bill slider ---------------------------------------------------------- */
+  function renderBill(step) {
+    const q = $("panel").querySelector(".question");
+    if (answers.monthlyBill == null) answers.monthlyBill = 280;
+
+    const wrap = el("div", "bill");
+    const readout = el("div", "bill-readout mono");
+    const setReadout = v => {
+      readout.innerHTML = "";
+      readout.appendChild(document.createTextNode("$" + v));
+      readout.appendChild(el("span", null, "/month"));
+    };
+    setReadout(answers.monthlyBill);
+
+    const slider = el("input", "bill-slider");
+    slider.type = "range";
+    slider.min = 80; slider.max = 1000; slider.step = 10;
+    slider.value = answers.monthlyBill;
+    slider.setAttribute("aria-label", "Average monthly power bill in dollars");
+    slider.addEventListener("input", () => {
+      answers.monthlyBill = Number(slider.value);
+      setReadout(answers.monthlyBill);
+      renderRail();
+    });
+
+    const scale = el("div", "bill-scale");
+    scale.appendChild(el("span", null, "$80"));
+    scale.appendChild(el("span", null, "$1,000+"));
+
+    wrap.appendChild(readout);
+    wrap.appendChild(slider);
+    wrap.appendChild(scale);
+    q.appendChild(wrap);
+
+    const actions = el("div", "actions");
+    const next = el("button", "btn btn-primary", "Continue");
+    next.type = "button";
+    next.addEventListener("click", advance);
+    actions.appendChild(next);
+    q.appendChild(actions);
+  }
+
+  function addBack() {
+    const q = $("panel").querySelector(".question");
+    const actions = el("div", "actions");
+    const b = el("button", "btn-link", "Back");
+    b.type = "button";
+    b.addEventListener("click", back);
+    actions.appendChild(b);
+    q.appendChild(actions);
+  }
+
+  /* --- Renter exit: honest, quick, and not a lead -------------------------- */
+  function renderRenterExit() {
+    const panel = $("panel");
+    panel.innerHTML = "";
+    const wrap = el("div", "question");
+    wrap.appendChild(el("p", "eyebrow", "One thing first"));
+    wrap.appendChild(el("h2", null, "Solar is your landlord's call, not yours."));
+    const body = el("div", "exit");
+    body.appendChild(el("p", null,
+      "Panels get fixed to the roof and paid off over years, so the decision sits with whoever owns the place. There's no version of this where we can quote you directly, and we'd rather say that than take your details."));
+    body.appendChild(el("p", null,
+      "If you'd like to raise it with your landlord, it's a genuinely good pitch: solar lifts a property's value and its Homestar rating, and the tenant sees the lower bills. Send them here."));
+    wrap.appendChild(body);
+
+    const actions = el("div", "actions");
+    const b = el("button", "btn btn-quiet", "Actually, I own this home");
+    b.type = "button";
+    b.addEventListener("click", () => { delete answers.ownership; render(); });
+    actions.appendChild(b);
+    wrap.appendChild(actions);
+    panel.appendChild(wrap);
+    $("progress-fill").style.width = "100%";
+    renderRail();
+    reportHeight();
+  }
+
+  /* --- Contact capture ------------------------------------------------------ */
+  function renderContact(step) {
+    const q = $("panel").querySelector(".question");
+    const form = el("form", "form");
+    form.noValidate = true;
+
+    const fields = [
+      { name: "firstName", label: "First name",   type: "text",  autocomplete: "given-name",  required: true },
+      { name: "lastName",  label: "Last name",    type: "text",  autocomplete: "family-name", required: false },
+      { name: "email",     label: "Email",        type: "email", autocomplete: "email",       required: true },
+      { name: "phone",     label: "Phone",        type: "tel",   autocomplete: "tel",         required: CFG.leads.requirePhone }
+    ];
+
+    fields.forEach(f => {
+      const wrap = el("div", "field");
+      const id = "f-" + f.name;
+      const label = el("label", null, f.label + (f.required ? "" : " (optional)"));
+      label.htmlFor = id;
+      const input = el("input");
+      input.id = id; input.name = f.name; input.type = f.type;
+      input.autocomplete = f.autocomplete;
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      form.appendChild(wrap);
+    });
+
+    const err = el("p", "field-error");
+    err.hidden = true;
+    form.appendChild(err);
+
+    const actions = el("div", "actions");
+    const submit = el("button", "btn btn-primary", "Show me the numbers");
+    submit.type = "submit";
+    actions.appendChild(submit);
+    const b = el("button", "btn-link", "Back");
+    b.type = "button";
+    b.addEventListener("click", back);
+    actions.appendChild(b);
+    form.appendChild(actions);
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const data = {};
+      fields.forEach(f => { data[f.name] = form.elements[f.name].value.trim(); });
+
+      const missing = fields.find(f => f.required && !data[f.name]);
+      if (missing) return showError(err, "We need your " + missing.label.toLowerCase() + " to send this through.");
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email))
+        return showError(err, "That email doesn't look right — mind checking it?");
+
+      err.hidden = true;
+      answers.contact = data;
+      submit.disabled = true;
+      submit.textContent = "Working it out…";
+      finish();
+    });
+
+    q.appendChild(form);
+    const note = el("p", "form-note",
+      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof — no obligation, and no third parties.");
+    q.appendChild(note);
+  }
+
+  function showError(node, message) {
+    node.textContent = message;
+    node.hidden = false;
+    reportHeight();
+  }
+
+  /* ==========================================================================
+     SUBMIT — push the lead, fire the tracking, then show the results.
+     The results show whether or not the webhook succeeds. Never punish the
+     homeowner for our plumbing failing.
+     ========================================================================== */
+  function finish() {
+    const result = window.SolarCalc.run(answers);
+    sendLead(result);
+    track(result);
+    submitted = true;
+    renderResults(result);
+  }
+
+  function sendLead(result) {
+    const payload = {
+      first_name: answers.contact.firstName,
+      last_name:  answers.contact.lastName,
+      email:      answers.contact.email,
+      phone:      answers.contact.phone,
+      source:     "Solar savings calculator",
+      // Everything the installer needs to pick up the phone already informed.
+      monthly_power_bill:   answers.monthlyBill,
+      region:               answers.region || CFG.region.default,
+      roof_orientation:     answers.orientation,
+      ownership:            answers.ownership,
+      mortgage_bank:        answers.bank || "",
+      equity:               answers.equity || "",
+      daytime_occupancy:    answers.occupancy,
+      estimated_system_kw:  result.system.kw,
+      estimated_panels:     result.panelCount,
+      estimated_cost_low:   result.cost.low,
+      estimated_cost_high:  result.cost.high,
+      estimated_annual_saving: Math.round(result.annualSaving),
+      estimated_payback_years: result.payback ? Number(result.payback.toFixed(1)) : null,
+      green_loan_eligible:  result.finance.eligible,
+      green_loan_product:   result.finance.product || "",
+      consent_likely_exempt: result.consent.likelyExempt,
+      submitted_at: new Date().toISOString()
+    };
+
+    if (!CFG.leads.webhookUrl) {
+      console.log("[calculator] No webhookUrl set in config.js. Lead payload:", payload);
+      return;
+    }
+    fetch(CFG.leads.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error("[calculator] Lead POST failed:", err));
+  }
+
+  function track(result) {
+    const value = Math.round(result.cost.mid);
+    if (window.fbq) window.fbq("track", "Lead", { value: value, currency: "NZD" });
+    if (window.gtag) window.gtag("event", "generate_lead", { value: value, currency: "NZD" });
+    // Let a parent page (e.g. a GoHighLevel funnel) fire its own tracking too.
+    post({ type: "solar-calculator:lead", value: value });
+  }
+
+  /* ==========================================================================
+     RESULTS
+     ========================================================================== */
+  function renderResults(r) {
+    $("stage").hidden = true;
+    $("progress-fill").style.width = "100%";
+    const out = $("results");
+    out.hidden = false;
+    out.className = "results";
+    out.innerHTML = "";
+
+    const name = answers.contact.firstName;
+    const worthIt = r.payback && r.payback <= 12;
+
+    /* Verdict */
+    const verdict = el("h1", "verdict");
+    if (worthIt) {
+      verdict.innerHTML = name + ", solar could take <em>" + pct(r.billOffset) +
+        "</em> off your power bill.";
+    } else {
+      verdict.innerHTML = name + ", solar would work here — but it's a <em>long</em> payback.";
+    }
+    out.appendChild(verdict);
+
+    const sub = el("p", "verdict-sub");
+    sub.textContent = worthIt
+      ? "About " + money(r.annualSaving) + " a year, from " + r.panelCount +
+        " panels on your roof. Worked out on your bill and Hawke's Bay sunshine, not a national average."
+      : "Your power bill is modest enough that the system takes a while to pay for itself. Here are the real numbers rather than a sales pitch.";
+    out.appendChild(sub);
+
+    /* Headline figures */
+    const figures = el("div", "figures");
+    [
+      { label: "Your system",   value: r.system.kw + " kW",
+        note: r.panelCount + " panels, about " + Math.round(r.consent.areaM2) + "m² of roof" },
+      { label: "Installed cost", value: moneyRange(r.cost.low, r.cost.high),
+        note: "Incl. GST. Confirmed on site." },
+      { label: "Saved per year", value: money(r.annualSaving), cls: "is-gain",
+        note: "In year one, rising as power prices do" },
+      { label: "Pays for itself", value: years(r.payback), cls: worthIt ? "is-gain" : "is-flag",
+        note: "Then " + years(25 - (r.payback || 25)).replace("25+ years", "20+ years") + " of savings" }
+    ].forEach(f => {
+      const c = el("div", "figure");
+      c.appendChild(el("span", "figure-label", f.label));
+      c.appendChild(el("span", "figure-value mono " + (f.cls || ""), f.value));
+      c.appendChild(el("span", "figure-note", f.note));
+      figures.appendChild(c);
+    });
+    out.appendChild(figures);
+
+    out.appendChild(billSection(r));
+    out.appendChild(chartSection(r));
+    out.appendChild(detailSection(r));
+    out.appendChild(assumptionsSection(r));
+    out.appendChild(ctaSection(r));
+
+    const d = el("p", "disclaimer");
+    d.textContent = "These are estimates, not a quote. They're built from your power bill, " +
+      "regional sunshine figures and 2026 New Zealand install pricing — but every roof is different. " +
+      CFG.client.name + " will confirm the numbers on site before you commit to anything.";
+    out.appendChild(d);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    reportHeight();
+    setTimeout(reportHeight, 700);
+  }
+
+  /* Bill comparison bars */
+  function billSection(r) {
+    const s = el("section", "section");
+    s.appendChild(el("h3", null, "What happens to your bill"));
+    s.appendChild(el("p", "section-lede",
+      "Doing nothing isn't holding steady — New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
+
+    const max = Math.max(r.monthlyBillIn10IfNothing, r.monthlyBillBefore, r.monthlyBillAfter);
+    const bars = el("div", "bars");
+    [
+      { label: "Now",                       v: r.monthlyBillBefore,        cls: "is-now" },
+      { label: "With solar",                v: r.monthlyBillAfter,         cls: "is-solar" },
+      { label: "In 10 years, if you don't", v: r.monthlyBillIn10IfNothing, cls: "is-drift" }
+    ].forEach(b => {
+      const row = el("div", "bar-row");
+      row.appendChild(el("div", "bar-label", b.label));
+      const track = el("div", "bar-track");
+      const fill = el("div", "bar-fill " + b.cls);
+      fill.style.width = "0%";
+      requestAnimationFrame(() => { fill.style.width = ((b.v / max) * 100) + "%"; });
+      track.appendChild(fill);
+      track.appendChild(el("span", "bar-value mono", money(b.v) + "/mo"));
+      row.appendChild(track);
+      bars.appendChild(row);
+    });
+    s.appendChild(bars);
+    return s;
+  }
+
+  /* 25-year cumulative savings chart, drawn as inline SVG */
+  function chartSection(r) {
+    const s = el("section", "section");
+    s.appendChild(el("h3", null, "The next 25 years"));
+    s.appendChild(el("p", "section-lede",
+      "Total savings against what you paid. Where the line crosses zero, the system has paid for itself. The dip at year " +
+      CFG.assumptions.inverterReplacement.year + " is a replacement inverter — we count it rather than pretend it away."));
+
+    const W = 720, H = 280, PAD_L = 62, PAD_R = 16, PAD_T = 18, PAD_B = 34;
+    const cost = r.cost.mid;
+    const net = r.projection.map(p => p.cumulative - cost);
+    const lo = Math.min(-cost, ...net), hi = Math.max(...net, 0);
+    const x = i => PAD_L + (i / (net.length - 1)) * (W - PAD_L - PAD_R);
+    const y = v => PAD_T + (1 - (v - lo) / (hi - lo)) * (H - PAD_T - PAD_B);
+
+    let path = "M " + PAD_L + " " + y(-cost);
+    net.forEach((v, i) => { path += " L " + x(i).toFixed(1) + " " + y(v).toFixed(1); });
+
+    const area = path + " L " + x(net.length - 1).toFixed(1) + " " + y(0).toFixed(1) +
+                 " L " + PAD_L + " " + y(0).toFixed(1) + " Z";
+
+    const ticks = [lo, (lo + hi) / 2, 0, hi].filter((v, i, a) => a.indexOf(v) === i);
+    const svg = [
+      '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cumulative savings over 25 years, breaking even at ' + years(r.payback) + '">',
+      '<defs><linearGradient id="fillG" x1="0" y1="0" x2="0" y2="1">',
+      '<stop offset="0%" stop-color="var(--brand)" stop-opacity=".22"/>',
+      '<stop offset="100%" stop-color="var(--brand)" stop-opacity="0"/>',
+      '</linearGradient></defs>'
+    ];
+    ticks.forEach(v => {
+      svg.push('<line x1="' + PAD_L + '" x2="' + (W - PAD_R) + '" y1="' + y(v).toFixed(1) +
+               '" y2="' + y(v).toFixed(1) + '" stroke="var(--line)" stroke-width="1"' +
+               (v === 0 ? '' : ' stroke-dasharray="2 4"') + '/>');
+      svg.push('<text x="' + (PAD_L - 10) + '" y="' + (y(v) + 4).toFixed(1) +
+               '" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">' +
+               (v === 0 ? "$0" : (v < 0 ? "-" : "") + "$" + Math.round(Math.abs(v) / 1000) + "k") + '</text>');
+    });
+    svg.push('<path d="' + area + '" fill="url(#fillG)"/>');
+    svg.push('<path d="' + path + '" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round"/>');
+
+    if (r.payback && r.payback < 25) {
+      const px = x(r.payback - 1);
+      svg.push('<line x1="' + px.toFixed(1) + '" x2="' + px.toFixed(1) + '" y1="' + PAD_T +
+               '" y2="' + (H - PAD_B) + '" stroke="var(--flag)" stroke-width="1" stroke-dasharray="3 3"/>');
+      svg.push('<circle cx="' + px.toFixed(1) + '" cy="' + y(0).toFixed(1) +
+               '" r="4.5" fill="var(--flag)"/>');
+      svg.push('<text x="' + (px + 9).toFixed(1) + '" y="' + (PAD_T + 14) +
+               '" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--flag)">Paid off · ' +
+               years(r.payback) + '</text>');
+    }
+    [1, 5, 10, 15, 20, 25].forEach(yr => {
+      svg.push('<text x="' + x(yr - 1).toFixed(1) + '" y="' + (H - 12) +
+               '" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">' +
+               (yr === 1 ? "Yr 1" : yr) + '</text>');
+    });
+    svg.push('</svg>');
+
+    const wrap = el("div", "chart-wrap");
+    wrap.innerHTML = svg.join("");
+    s.appendChild(wrap);
+
+    const legend = el("div", "chart-legend");
+    legend.innerHTML =
+      '<span><i class="swatch" style="background:var(--brand)"></i>Money ahead, after paying for the system</span>' +
+      '<span><i class="swatch" style="background:var(--flag)"></i>Break-even point</span>';
+    s.appendChild(legend);
+
+    const total = el("p", "section-lede");
+    total.style.marginTop = "1.1rem";
+    total.textContent = "Over 25 years that's roughly " +
+      moneyRange(r.savings25.low, r.savings25.high) +
+      " back in your pocket, after the system and a replacement inverter are paid for.";
+    s.appendChild(total);
+    return s;
+  }
+
+  /* Finance + consent */
+  function detailSection(r) {
+    const s = el("section", "section");
+    s.appendChild(el("h3", null, "Paying for it, and the paperwork"));
+    const cards = el("div", "cards");
+
+    /* --- Finance --- */
+    const fin = el("div", "card");
+    const f = r.finance;
+    if (f.eligible && f.kind === "loan") {
+      fin.className = "card is-good";
+      fin.appendChild(pill("You likely qualify", "is-good"));
+      fin.appendChild(el("h4", null, f.product));
+      fin.appendChild(el("div", "card-figure mono", money(f.monthly) + "/month"));
+      fin.appendChild(el("p", null,
+        (f.rate === 0 ? "At 0% interest" : "At " + (f.rate * 100) + "% interest") +
+        " over " + f.termYears + " years on " + money(f.borrowed) + ". " +
+        "Your monthly saving of " + money(r.annualSaving / 12) +
+        (r.annualSaving / 12 >= f.monthly
+          ? " more than covers that repayment from day one."
+          : " covers most of it, so you're out of pocket about " +
+            money(f.monthly - r.annualSaving / 12) + " a month until it's paid off.") +
+        (f.seanz ? " " + f.bank + " require a SEANZ-accredited installer." : "")));
+    } else if (f.eligible && f.kind === "cashback") {
+      fin.className = "card is-good";
+      fin.appendChild(pill("You likely qualify", "is-good"));
+      fin.appendChild(el("h4", null, f.product));
+      fin.appendChild(el("div", "card-figure mono", money(f.cashback)));
+      fin.appendChild(el("p", null,
+        f.bank + " give a " + money(f.cashback) + " cashback on solar rather than a discounted rate, so you'd be paying standard rates on the balance." +
+        (f.seanz ? " They require a SEANZ-accredited installer." : "")));
+    } else {
+      fin.appendChild(pill("No green loan", "is-warn"));
+      fin.appendChild(el("h4", null, "How you'd pay for it"));
+      fin.appendChild(el("p", null, f.reason));
+    }
+    cards.appendChild(fin);
+
+    /* --- Consent --- */
+    const con = el("div", "card");
+    const c = r.consent;
+    if (c.likelyExempt) {
+      con.className = "card is-good";
+      con.appendChild(pill("Likely no consent", "is-good"));
+      con.appendChild(el("h4", null, "You probably don't need building consent"));
+      con.appendChild(el("div", "card-figure mono", Math.round(c.areaM2) + "m²"));
+      con.appendChild(el("p", null,
+        "Since October 2025 most home solar installs are consent-exempt if the panels cover under " +
+        c.limitM2 + "m², the property is in a standard wind zone, and the panels sit flush or on standard frames. " +
+        "Yours is " + Math.round(c.areaM2) + "m². That saves roughly " +
+        moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
+        " and several weeks — " + CFG.client.name + " will confirm your wind zone."));
+    } else {
+      con.appendChild(pill("Consent likely", "is-warn"));
+      con.appendChild(el("h4", null, "This one probably needs consent"));
+      con.appendChild(el("div", "card-figure mono", Math.round(c.areaM2) + "m²"));
+      con.appendChild(el("p", null,
+        "The October 2025 exemption covers installs under " + c.limitM2 +
+        "m² of panels. At " + Math.round(c.areaM2) + "m² yours is over that, so budget another " +
+        moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
+        " and a few extra weeks. A slightly smaller system may duck under the line — worth asking about."));
+    }
+    cards.appendChild(con);
+
+    s.appendChild(cards);
+    return s;
+  }
+
+  function pill(text, cls) {
+    return el("span", "pill " + (cls || ""), text);
+  }
+
+  /* Show the working. Costs nothing and answers the sceptics. */
+  function assumptionsSection(r) {
+    const d = el("details", "assumptions");
+    const sum = el("summary", null, "The numbers behind this — every assumption we used");
+    d.appendChild(sum);
+    const a = CFG.assumptions;
+    const rows = [
+      ["Your power use, worked back from your bill", Math.round(r.usageKwh).toLocaleString("en-NZ") + " kWh/yr"],
+      ["Used during daylight, when panels are working", Math.round(r.daytimeKwh).toLocaleString("en-NZ") + " kWh/yr"],
+      ["What this system generates in year one", Math.round(r.generation).toLocaleString("en-NZ") + " kWh/yr"],
+      ["Of that, used in your home rather than exported", pct(r.selfConsumptionRate)],
+      ["Power you buy", (a.buyRatePerKwh * 100).toFixed(1) + "c/kWh"],
+      ["Power you sell back", (a.sellRatePerKwh * 100).toFixed(0) + "c/kWh"],
+      ["Daily fixed line charge", "$" + a.dailyFixedCharge.toFixed(2) + "/day"],
+      ["Power price rises, per year", pct(a.electricityInflation)],
+      ["Sunshine here", Math.round(r.yieldPerKw) + " kWh per kW installed"],
+      ["Panel output lost per year", (a.panelDegradationPerYear * 100).toFixed(1) + "%"],
+      ["Replacement inverter, year " + a.inverterReplacement.year, money(a.inverterReplacement.cost)]
+    ];
+    const table = el("table");
+    rows.forEach(([k, v]) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", null, k));
+      tr.appendChild(el("td", null, v));
+      table.appendChild(tr);
+    });
+    d.appendChild(table);
+    d.addEventListener("toggle", reportHeight);
+    return d;
+  }
+
+  function ctaSection(r) {
+    const s = el("section", "cta");
+    s.appendChild(el("h3", null, "Want these numbers checked on your actual roof?"));
+    const p = el("p", null,
+      CFG.client.proofPoint ? CFG.client.proofPoint :
+      CFG.client.name + " will confirm the estimate on site, at no cost.");
+    s.appendChild(p);
+    s.appendChild(el("p", null,
+      "We've sent a copy to " + answers.contact.email + ". Someone will be in touch to walk you through it."));
+
+    const actions = el("div", "cta-actions");
+    if (CFG.client.phone) {
+      const call = el("a", "btn btn-primary", "Call " + CFG.client.phone);
+      call.href = "tel:" + CFG.client.phone.replace(/\s/g, "");
+      actions.appendChild(call);
+    }
+    if (CFG.client.website) {
+      const site = el("a", "btn btn-quiet", "Visit " + CFG.client.name);
+      site.href = CFG.client.website;
+      site.target = "_blank";
+      site.rel = "noopener";
+      actions.appendChild(site);
+    }
+    s.appendChild(actions);
+    return s;
+  }
+
+  /* ==========================================================================
+     IFRAME SUPPORT
+     The page tells its parent how tall it is, so a GoHighLevel funnel can
+     resize the iframe instead of showing an inner scrollbar.
+     ========================================================================== */
+  function post(msg) {
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage(msg, "*"); } catch (e) {}
+    }
+  }
+  let lastHeight = 0;
+  function reportHeight() {
+    requestAnimationFrame(() => {
+      const h = Math.ceil(document.body.scrollHeight);
+      if (Math.abs(h - lastHeight) < 2) return;
+      lastHeight = h;
+      post({ type: "solar-calculator:height", height: h });
+    });
+  }
+
+  /* --- Ad tracking pixels, loaded from config ------------------------------ */
+  function loadTracking() {
+    const t = CFG.tracking;
+    if (t.metaPixelId) {
+      /* eslint-disable */
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+      (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      /* eslint-enable */
+      window.fbq("init", t.metaPixelId);
+      window.fbq("track", "PageView");
+    }
+    if (t.ga4MeasurementId) {
+      const g = document.createElement("script");
+      g.async = true;
+      g.src = "https://www.googletagmanager.com/gtag/js?id=" + t.ga4MeasurementId;
+      document.head.appendChild(g);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag("js", new Date());
+      window.gtag("config", t.ga4MeasurementId);
+    }
+  }
+
+  /* --- Go -------------------------------------------------------------------- */
+  applyBrand();
+  renderMasthead();
+  loadTracking();
+  if (CFG.region.lockToDefault) answers.region = CFG.region.default;
+  render();
+  window.addEventListener("resize", reportHeight);
+})();

@@ -1,0 +1,46 @@
+<!-- ===========================================================================
+     PASTE THIS INTO GOHIGHLEVEL
+
+     In the funnel/website builder: add a "Custom JS/HTML" element where you
+     want the calculator, click into it, and paste everything below.
+
+     Change ONE thing: the src URL on the iframe -> your Netlify address.
+     =========================================================================== -->
+
+<div id="solar-calc-wrap" style="max-width:1180px;margin:0 auto;">
+  <iframe
+    id="solar-calc"
+    src="https://YOUR-SITE.netlify.app/"
+    title="Solar savings calculator"
+    scrolling="no"
+    style="width:100%;height:760px;border:0;display:block;overflow:hidden;"
+    loading="lazy"></iframe>
+</div>
+
+<script>
+(function () {
+  var frame = document.getElementById("solar-calc");
+
+  window.addEventListener("message", function (e) {
+    if (!e.data || typeof e.data !== "object") return;
+
+    // The calculator tells us how tall it is at each step, so the iframe grows
+    // and shrinks with it instead of showing an inner scrollbar.
+    if (e.data.type === "solar-calculator:height" && e.data.height) {
+      frame.style.height = (e.data.height + 24) + "px";
+    }
+
+    // Fires when someone submits. This lets THIS page's Meta Pixel and Google
+    // tag record the conversion too, not just the one inside the calculator.
+    if (e.data.type === "solar-calculator:lead") {
+      if (window.fbq)  window.fbq("track", "Lead", { value: e.data.value, currency: "NZD" });
+      if (window.gtag) window.gtag("event", "generate_lead", { value: e.data.value, currency: "NZD" });
+
+      // Scroll the results into view — on mobile the iframe has just got much
+      // taller and the reader would otherwise be left staring at the middle.
+      var top = document.getElementById("solar-calc-wrap").getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: top - 20, behavior: "smooth" });
+    }
+  });
+})();
+</script>

@@ -1,0 +1,1642 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar Savings Calculator</title>
+<meta name="description" content="See what solar would save on your power bill — system size, install cost, annual savings and payback, worked out on real New Zealand figures.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ============================================================================
+   NZ Solar Savings Calculator — styles
+   Design: instrument panel. Cool paper, slate ink, one brand colour doing all
+   the emphasis, and a fixed ochre used only for cautions. Every number is set
+   in mono so figures read like a meter rather than marketing.
+
+   To re-skin for a client you change brand.accent / brand.accentDark in
+   config.js. Nothing in this file needs touching.
+   ============================================================================ */
+
+/* --- Tokens. Light is the base; dark redefines only these values. --------- */
+:root {
+  --paper:      #F2F5F7;
+  --surface:    #FFFFFF;
+  --surface-2:  #E8EEF2;
+  --ink:        #0E1922;
+  --ink-2:      #566875;
+  --ink-3:      #8496A3;
+  --line:       #D3DCE3;
+  --line-soft:  #E4EAEF;
+  --brand:      #17734A;
+  --brand-ink:  #FFFFFF;
+  --brand-wash: #E4EFE9;
+  --flag:       #8A5A00;
+  --flag-wash:  #F6EEDF;
+
+  --shadow: 0 1px 2px rgba(14,25,34,.05), 0 8px 24px -12px rgba(14,25,34,.18);
+
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body:    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+  --mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --step:  clamp(1rem, .8rem + .6vw, 1.25rem);
+  --gutter: clamp(1.25rem, .9rem + 1.6vw, 2.5rem);
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0B1116;
+    --surface:    #141C23;
+    --surface-2:  #1C262F;
+    --ink:        #E6EDF2;
+    --ink-2:      #93A4B1;
+    --ink-3:      #647684;
+    --line:       #253039;
+    --line-soft:  #1D262E;
+    --brand:      #3FB37A;
+    --brand-ink:  #06140D;
+    --brand-wash: #10261B;
+    --flag:       #D9A441;
+    --flag-wash:  #241C0C;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0B1116;
+  --surface:    #141C23;
+  --surface-2:  #1C262F;
+  --ink:        #E6EDF2;
+  --ink-2:      #93A4B1;
+  --ink-3:      #647684;
+  --line:       #253039;
+  --line-soft:  #1D262E;
+  --brand:      #3FB37A;
+  --brand-ink:  #06140D;
+  --brand-wash: #10261B;
+  --flag:       #D9A441;
+  --flag-wash:  #241C0C;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+}
+
+* { box-sizing: border-box; }
+
+/* display:grid on .stage would otherwise beat the hidden attribute. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--step);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.015em; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+
+/* --- Shell ---------------------------------------------------------------- */
+.app { max-width: 1120px; margin: 0 auto; padding: 0 var(--gutter) 4rem; }
+
+.masthead {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 1.25rem 0 1rem;
+}
+.brand { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.brand img { height: 34px; width: auto; display: block; }
+.brand-name { font-family: var(--display); font-weight: 600; font-size: 1.05rem; letter-spacing: -.01em; }
+.brand-tag { color: var(--ink-3); font-size: .8rem; }
+.masthead-phone {
+  font-family: var(--mono); font-size: .82rem; color: var(--ink-2);
+  text-decoration: none; white-space: nowrap;
+}
+.masthead-phone:hover { color: var(--brand); }
+
+/* The progress rule doubles as the page's only horizontal division. */
+.progress { height: 2px; background: var(--line); position: relative; overflow: hidden; }
+.progress-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  background: var(--brand); transition: width .45s cubic-bezier(.4,0,.2,1);
+}
+
+/* --- Two-column: recorded answers on the left, one question on the right -- */
+.stage { display: grid; grid-template-columns: 244px 1fr; gap: clamp(1.5rem, 4vw, 3.5rem); padding-top: 2rem; }
+@media (max-width: 800px) { .stage { grid-template-columns: 1fr; gap: 1.5rem; } }
+
+/* --- The rail: answers accumulate here as meter readings ------------------ */
+.rail { align-self: start; position: sticky; top: 1.5rem; }
+.rail-title { margin-bottom: .9rem; }
+.rail-list { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.rail-item {
+  display: flex; flex-direction: column; gap: .1rem;
+  padding: .55rem 0; border-bottom: 1px solid var(--line-soft);
+  animation: reading-in .35s cubic-bezier(.2,.8,.3,1) both;
+}
+.rail-label { font-size: .72rem; color: var(--ink-3); letter-spacing: .02em; }
+.rail-value { font-family: var(--mono); font-size: .88rem; font-variant-numeric: tabular-nums; }
+.rail-empty { color: var(--ink-3); font-size: .82rem; line-height: 1.5; }
+
+@keyframes reading-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 800px) {
+  .rail { position: static; }
+  .rail-title { display: none; }
+  .rail-list { flex-direction: row; gap: .45rem; overflow-x: auto; padding-bottom: .3rem; }
+  .rail-item {
+    flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px;
+    padding: .3rem .7rem; background: var(--surface);
+  }
+  .rail-label { display: none; }
+  .rail-value { font-size: .78rem; white-space: nowrap; }
+  .rail-empty { display: none; }
+}
+
+/* --- The question panel --------------------------------------------------- */
+.panel { min-width: 0; }
+.question { animation: question-in .34s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes question-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.question h2 { font-size: clamp(1.45rem, 1.15rem + 1.5vw, 2.1rem); line-height: 1.15; margin: .5rem 0 0; max-width: 20ch; }
+.question-why { color: var(--ink-2); font-size: .92rem; margin-top: .7rem; max-width: 46ch; }
+
+.options { display: grid; gap: .5rem; margin-top: 1.6rem; max-width: 34rem; }
+.options.two-up { grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .options.two-up { grid-template-columns: 1fr; } }
+
+.option {
+  display: flex; align-items: baseline; gap: .75rem; width: 100%; text-align: left;
+  padding: .85rem 1rem; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  cursor: pointer; transition: border-color .15s, background .15s, transform .1s;
+}
+.option:hover { border-color: var(--ink-3); }
+.option:active { transform: translateY(1px); }
+.option[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-wash); }
+.option-key {
+  font-family: var(--mono); font-size: .68rem; color: var(--ink-3);
+  flex: 0 0 auto; padding-top: .12rem;
+}
+.option[aria-pressed="true"] .option-key { color: var(--brand); }
+.option-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.option-label { font-weight: 500; line-height: 1.3; }
+.option-note { font-size: .8rem; color: var(--ink-2); }
+
+/* --- Bill slider ---------------------------------------------------------- */
+.bill { margin-top: 1.6rem; max-width: 34rem; }
+.bill-readout { font-family: var(--mono); font-size: clamp(2.6rem, 2rem + 3.5vw, 4rem); font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.03em; }
+.bill-readout span { font-size: .35em; color: var(--ink-3); letter-spacing: 0; margin-left: .3rem; }
+.bill-slider { width: 100%; margin: 1.5rem 0 .4rem; accent-color: var(--brand); height: 24px; }
+.bill-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .72rem; color: var(--ink-3); }
+
+/* --- Buttons -------------------------------------------------------------- */
+.actions { display: flex; align-items: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+.btn {
+  border: 1px solid transparent; border-radius: var(--radius);
+  padding: .8rem 1.5rem; font-weight: 500; cursor: pointer;
+  transition: filter .15s, transform .1s, border-color .15s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--brand); color: var(--brand-ink); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary[disabled] { opacity: .35; cursor: not-allowed; }
+.btn-quiet { background: none; border-color: var(--line); color: var(--ink-2); }
+.btn-quiet:hover { border-color: var(--ink-3); color: var(--ink); }
+.btn-link { background: none; border: none; color: var(--ink-3); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-size: .85rem; padding: 0; }
+.btn-link:hover { color: var(--ink); }
+
+/* --- Contact form --------------------------------------------------------- */
+.form { display: grid; gap: .75rem; margin-top: 1.6rem; max-width: 26rem; }
+.field { display: flex; flex-direction: column; gap: .3rem; }
+.field label { font-size: .78rem; color: var(--ink-2); }
+.field input {
+  font: inherit; font-size: .95rem; padding: .7rem .85rem;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); color: var(--ink);
+}
+.field input::placeholder { color: var(--ink-3); }
+.field input:focus { outline: 2px solid var(--brand); outline-offset: -1px; border-color: transparent; }
+.field-error { font-size: .78rem; color: var(--brand); }
+.form-note { font-size: .78rem; color: var(--ink-3); max-width: 34rem; margin-top: .2rem; }
+
+/* --- Renter exit ---------------------------------------------------------- */
+.exit { max-width: 32rem; margin-top: 1.4rem; }
+.exit p { color: var(--ink-2); margin-top: .8rem; }
+
+/* ==========================================================================
+   RESULTS — breaks the two-column grid and runs full width.
+   ========================================================================== */
+.results { animation: question-in .4s cubic-bezier(.2,.8,.3,1) both; padding-top: 2rem; }
+
+.verdict { max-width: 24ch; font-size: clamp(1.9rem, 1.3rem + 2.8vw, 3.1rem); line-height: 1.08; }
+.verdict em { font-style: normal; color: var(--brand); }
+.verdict-sub { color: var(--ink-2); margin-top: 1rem; max-width: 52ch; font-size: 1rem; }
+
+/* Headline figures, laid out like a meter panel. */
+.figures {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden; margin-top: 2.25rem;
+}
+@media (max-width: 780px) { .figures { grid-template-columns: repeat(2, 1fr); } }
+.figure { background: var(--surface); padding: 1.1rem 1.15rem 1.2rem; display: flex; flex-direction: column; gap: .35rem; }
+.figure-label { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.figure-value { font-family: var(--mono); font-size: clamp(1.35rem, 1.1rem + 1vw, 1.85rem); font-variant-numeric: tabular-nums; letter-spacing: -.02em; line-height: 1.1; }
+.figure-value.is-gain { color: var(--brand); }
+.figure-value.is-flag { color: var(--flag); }
+.figure-note { font-size: .76rem; color: var(--ink-3); line-height: 1.4; }
+
+/* Section rhythm */
+.section { margin-top: 3.25rem; }
+.section > h3 { font-size: 1.2rem; margin-bottom: .3rem; }
+.section-lede { color: var(--ink-2); font-size: .92rem; max-width: 56ch; }
+
+/* Bill comparison bars */
+.bars { display: flex; flex-direction: column; gap: .8rem; margin-top: 1.4rem; max-width: 40rem; }
+.bar-row { display: grid; grid-template-columns: 10.5rem 1fr; gap: .9rem; align-items: center; }
+@media (max-width: 560px) { .bar-row { grid-template-columns: 1fr; gap: .25rem; } }
+.bar-label { font-size: .84rem; color: var(--ink-2); }
+.bar-track { display: flex; align-items: center; gap: .6rem; }
+.bar-fill { height: 26px; border-radius: 3px; background: var(--surface-2); min-width: 2px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.bar-fill.is-now { background: var(--ink-3); }
+.bar-fill.is-drift { background: var(--flag); opacity: .6; }
+.bar-fill.is-solar { background: var(--brand); }
+.bar-value { font-family: var(--mono); font-size: .86rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The 25-year chart */
+.chart-wrap { margin-top: 1.4rem; overflow-x: auto; }
+.chart { width: 100%; min-width: 460px; height: auto; display: block; }
+.chart-legend { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-top: .9rem; font-size: .78rem; color: var(--ink-2); }
+.chart-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+
+/* Detail cards: finance, consent */
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.4rem; }
+@media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.35rem; }
+.card h4 { font-family: var(--display); font-size: 1rem; font-weight: 600; margin: .45rem 0 .5rem; }
+.card p { font-size: .88rem; color: var(--ink-2); }
+.card-figure { font-family: var(--mono); font-size: 1.5rem; font-variant-numeric: tabular-nums; margin: .5rem 0 .3rem; letter-spacing: -.02em; }
+.card.is-good { border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+.card.is-good .card-figure { color: var(--brand); }
+
+.pill {
+  display: inline-block; font-family: var(--mono); font-size: .66rem;
+  letter-spacing: .1em; text-transform: uppercase; padding: .2rem .5rem;
+  border-radius: 3px; background: var(--surface-2); color: var(--ink-2);
+}
+.pill.is-good { background: var(--brand-wash); color: var(--brand); }
+.pill.is-warn { background: var(--flag-wash); color: var(--flag); }
+
+/* Assumptions — collapsed, but present. Credibility comes from showing your working. */
+.assumptions { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.assumptions summary { cursor: pointer; font-size: .88rem; color: var(--ink-2); }
+.assumptions summary:hover { color: var(--ink); }
+.assumptions table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .84rem; }
+.assumptions td { padding: .45rem 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.assumptions td:first-child { color: var(--ink-2); padding-right: 1.5rem; }
+.assumptions td:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+/* Closing call to action */
+.cta { margin-top: 3rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(1.4rem, 3vw, 2.25rem); box-shadow: var(--shadow); }
+.cta h3 { font-size: clamp(1.2rem, 1rem + .8vw, 1.5rem); max-width: 24ch; }
+.cta p { color: var(--ink-2); margin-top: .6rem; max-width: 50ch; font-size: .92rem; }
+.cta-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.4rem; }
+.cta .btn { text-decoration: none; display: inline-block; }
+
+.disclaimer { margin-top: 2rem; font-size: .76rem; color: var(--ink-3); max-width: 62ch; line-height: 1.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="masthead">
+    <div class="brand" id="brand"></div>
+    <a class="masthead-phone" id="masthead-phone" href="#"></a>
+  </header>
+  <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <!-- The question flow -->
+  <div class="stage" id="stage">
+    <aside class="rail">
+      <p class="eyebrow rail-title">Your details</p>
+      <ul class="rail-list" id="rail"></ul>
+    </aside>
+    <main class="panel" id="panel"></main>
+  </div>
+
+  <!-- The results, once they've handed over their details -->
+  <div id="results" hidden></div>
+</div>
+
+<script>
+/* ============================================================================
+   CONFIG — THIS IS THE ONLY FILE YOU EDIT FOR A NEW CLIENT.
+   Copy the whole project folder, change the values below, deploy. Done.
+   Everything else (the NZ data, the maths, the design) is shared.
+   ============================================================================ */
+
+window.SOLAR_CONFIG = {
+
+  /* --- The installer's details. Shown in the header and on the results page. --- */
+  client: {
+    name:     "Solar Colab",
+    tagline:  "Servicing Napier, Hastings & Havelock North",
+    phone:    "0800 726 522",
+    email:    "",                       // Tim: fill in their enquiries address
+    website:  "https://solarcolab.co.nz",
+
+    // Their Webflow-hosted wordmark. Loads straight from their CDN, so it
+    // stays in sync if they ever update it.
+    logoUrl:     "https://cdn.prod.website-files.com/641b84915881276efe9a7512/6758fd65a6b5095e3fc7bf93_Solar%20Colab%20RGB%20Hero%20logo.Black.png",
+    logoUrlDark: "",                    // A white/reversed logo for dark mode, if they have one.
+
+    // Shown on the results page as the reason to trust the quote.
+    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Electrical \u2014 the region's electrical specialists since 1993."
+  },
+
+  /* --- Their brand colour. Two values, used everywhere. --- */
+  brand: {
+    // >>> PROVISIONAL. Tim: send me Solar Colab's real hex codes (or just a
+    // screenshot of their site) and this becomes a 30-second fix. Their site
+    // and CDN are blocked from where I'm running, so I couldn't read them. <<<
+    accent:     "#17734A",  // on light backgrounds
+    accentDark: "#3FB37A"   // on dark backgrounds - needs to stay readable
+  },
+
+  /* --- Region --- */
+  region: {
+    default: "hawkes-bay",
+    // Set to true if this installer only services one region and you want to
+    // skip the region question entirely (one less step = better conversion).
+    // Solar Colab only service Hawke's Bay, so we skip the region question
+    // entirely. One less step is one less place to lose a lead.
+    lockToDefault: true
+  },
+
+  /* --- Where the lead goes. --- */
+  leads: {
+    // Paste the installer's GoHighLevel *Inbound Webhook* URL here.
+    // GHL: Automation > Workflows > new workflow > trigger "Inbound Webhook" > copy URL.
+    // Leave blank while testing — the form will still work and log to the browser console.
+    webhookUrl: "",
+    requirePhone: true
+  },
+
+  /* --- Ad tracking. Leave blank if not using. --- */
+  tracking: {
+    metaPixelId:      "",   // e.g. "1234567890"
+    ga4MeasurementId: ""    // e.g. "G-XXXXXXXXXX"
+  },
+
+  /* --- Their own install pricing, if they've given it to you. ---
+     Leave as null to use the shared NZ pricing table in nz-data.js.
+     To override, copy the shape from NZ_SYSTEM_PRICING in nz-data.js. */
+  pricingOverride: null,
+
+  /* ==========================================================================
+     ASSUMPTIONS — the numbers behind every figure the homeowner sees.
+     These are the ones worth arguing about. Change a number here and every
+     result on the page changes with it.
+     ========================================================================== */
+  assumptions: {
+
+    // What a homeowner PAYS per unit of power, and what they GET paid for
+    // power they export back to the grid. Buy rate is the NZ average; sell
+    // rate is a typical solar-plan buyback.
+    buyRatePerKwh:  0.2711,
+    sellRatePerKwh: 0.17,
+
+    // Daily fixed line charge. We subtract this before working out how many
+    // units they actually use, otherwise we'd overestimate their usage.
+    dailyFixedCharge: 1.80,
+
+    // How fast power prices rise. NZ prices rose ~31% over the last 5 years,
+    // which is about 5.5%/year. We deliberately use 3% so the savings figure
+    // is conservative and defensible if a homeowner challenges it.
+    electricityInflation: 0.03,
+
+    // Panel hardware. 440W panels are the current standard; ~1.95m² each.
+    panelWatts:   440,
+    panelAreaM2:  1.95,
+
+    // SELF-CONSUMPTION — the most important assumption in the whole tool.
+    // Power used in the house as it's generated is worth the full 27c buy
+    // rate. Power exported is worth 17c. So payback moves on this more than
+    // on anything else.
+    //
+    // We DON'T size the system to cover their whole bill. A big power user
+    // sized that way ends up with an oversized array exporting cheap power,
+    // which makes payback worse, not better. Instead we size to what the
+    // house can actually absorb during daylight — which is how installers
+    // size in practice, and it lands us in the same place Solar Scout got
+    // to on the same inputs.
+    //
+    // daytimeUsageShare: how much of a year's power gets used in daylight.
+    // >>> Tim: these are my estimates. Confirm with Solar Colab. <<<
+    daytimeUsageShare: {
+      home:  0.45,   // someone home during the day
+      mixed: 0.35,   // sometimes home
+      out:   0.25    // out all day
+    },
+
+    // Solar output and household demand never line up perfectly — the sun
+    // peaks at midday, the kettle doesn't. This discounts for that mismatch.
+    solarLoadMatch: 0.85,
+
+    // How much a roof loses compared to a perfect north-facing roof.
+    orientationFactor: {
+      north:    1.00,
+      eastWest: 0.87,
+      south:    0.65,
+      // When they don't know, assume something between north and east-west
+      // rather than the best case. Better to under-promise.
+      unsure:   0.93
+    },
+
+    // Panels lose about 0.5% output per year.
+    panelDegradationPerYear: 0.005,
+
+    // Inverters don't last 25 years. Counting this makes the numbers honest
+    // and is a good answer when a homeowner asks "what's the catch".
+    inverterReplacement: { year: 13, cost: 2500 },
+
+    // How far out we project savings.
+    analysisYears: 25
+  }
+};
+
+</script>
+<script>
+/* ============================================================================
+   NZ DATA — shared across every client. You shouldn't need to touch this
+   unless NZ rules or prices change. If a bank changes its green loan, this
+   is the one place to fix it and every client gets the update.
+   ============================================================================ */
+
+/* --- SOLAR YIELD BY REGION ---------------------------------------------------
+   kWh generated per year, per kW of panels installed, on a good north roof.
+
+   >>> PLACEHOLDER DATA — TIM, REPLACE THIS WITH YOUR REAL TABLE. <<<
+   These are estimates in the right ballpark and in the order you gave me
+   (Wellington top, then New Plymouth, Blenheim, Auckland), but the exact
+   figures are guesses and every savings number on the page depends on them.
+   Send me your table and this becomes a 2-minute fix.
+--------------------------------------------------------------------------- */
+window.NZ_REGIONS = [
+  { id: "northland",     name: "Northland",           yield: 1270 },
+  { id: "auckland",      name: "Auckland",            yield: 1290 },
+  { id: "waikato",       name: "Waikato / Hamilton",  yield: 1230 },
+  { id: "bay-of-plenty", name: "Bay of Plenty",       yield: 1280 },
+  { id: "gisborne",      name: "Gisborne",            yield: 1275 },
+  { id: "hawkes-bay",    name: "Hawke's Bay",         yield: 1285 },
+  { id: "taranaki",      name: "Taranaki",            yield: 1320 },
+  { id: "manawatu",      name: "Manawatū / Whanganui",yield: 1240 },
+  { id: "wellington",    name: "Wellington",          yield: 1340 },
+  { id: "nelson",        name: "Nelson",              yield: 1300 },
+  { id: "marlborough",   name: "Marlborough",         yield: 1310 },
+  { id: "canterbury",    name: "Canterbury",          yield: 1250 },
+  { id: "otago",         name: "Otago",               yield: 1210 },
+  { id: "southland",     name: "Southland",           yield: 1120 }
+];
+
+/* --- INSTALLED PRICING (incl. GST), 2026 NZ rates -------------------------
+   Straight from your brief. If an installer gives you their own pricing,
+   copy this shape into pricingOverride in config.js.
+   Note: your 8kW and 10kW figures are identical ($15k–$18k). Left as given,
+   but worth a sanity check with an installer — I'd expect 10kW to be dearer.
+--------------------------------------------------------------------------- */
+window.NZ_SYSTEM_PRICING = [
+  { kw: 3.0,  low:  8000, high: 10000 },
+  { kw: 5.0,  low: 11000, high: 13000 },
+  { kw: 6.6,  low: 14000, high: 15000 },
+  { kw: 8.0,  low: 15000, high: 18000 },
+  { kw: 10.0, low: 15000, high: 18000 },
+  { kw: 13.0, low: 20000, high: 30000 }
+];
+
+/* --- BANK GREEN LOANS -----------------------------------------------------
+   IMPORTANT: every one of these is a TOP-UP ON AN EXISTING MORTGAGE with
+   that specific bank. Outright owners and renters do NOT qualify for any of
+   them. The tool must never imply otherwise — that's the fastest way to make
+   an installer look dishonest.
+--------------------------------------------------------------------------- */
+window.NZ_GREEN_LOANS = {
+  anz: {
+    bank: "ANZ", product: "ANZ Good Energy Home Loan",
+    kind: "loan", rate: 0.01, termYears: 3, cap: 80000,
+    minEquity: 0.20, requiresSeanzInstaller: true
+  },
+  asb: {
+    bank: "ASB", product: "ASB Better Homes Top Up",
+    kind: "loan", rate: 0.01, termYears: 3, cap: 80000,
+    minEquity: 0.20, requiresSeanzInstaller: false
+  },
+  bnz: {
+    bank: "BNZ", product: "BNZ Green Home Loan top-up",
+    kind: "loan", rate: 0.01, termYears: 3, cap: 80000,
+    minEquity: 0.20, requiresSeanzInstaller: false
+  },
+  westpac: {
+    bank: "Westpac", product: "Westpac Greater Choices Home Loan",
+    kind: "loan", rate: 0.00, termYears: 5, cap: 50000,
+    minEquity: 0.20, requiresSeanzInstaller: false
+  },
+  kiwibank: {
+    bank: "Kiwibank", product: "Kiwibank Sustainable Energy Loan",
+    kind: "cashback", cashback: 2000,
+    minEquity: 0.20, requiresSeanzInstaller: true
+  },
+  other: { bank: "Another bank", kind: "none" }
+};
+
+/* --- BUILDING CONSENT -----------------------------------------------------
+   Since October 2025 most residential installs no longer need consent if:
+     - total panel area is under 40m²
+     - the property is in a standard wind zone
+     - it's on an existing building
+     - panels are flush-mounted or on standard tilt frames
+   We can only check the panel area from what we ask, so everything the tool
+   says here is phrased as "likely", with the installer confirming.
+--------------------------------------------------------------------------- */
+window.NZ_CONSENT = {
+  exemptAreaM2: 40,
+  savingLow: 1000,
+  savingHigh: 2000
+};
+
+</script>
+<script>
+/* ============================================================================
+   THE MATHS. Pure calculation, no page/design code.
+
+   The chain, in plain English:
+     bill  ->  units used  ->  system size  ->  power generated
+           ->  how much they use vs export  ->  savings  ->  payback
+   ============================================================================ */
+
+window.SolarCalc = (function () {
+
+  const A = () => window.SOLAR_CONFIG.assumptions;
+
+  /* Work backwards from a power bill to how many units (kWh) they use a year.
+     We take the fixed daily line charge off first, because that part of the
+     bill has nothing to do with how much power they use — and solar won't
+     touch it either. */
+  function annualUsageKwh(monthlyBill) {
+    const a = A();
+    const annualBill = monthlyBill * 12;
+    const fixed = a.dailyFixedCharge * 365;
+    const variable = Math.max(annualBill - fixed, 0);
+    return variable / a.buyRatePerKwh;
+  }
+
+  /* How many units a 1kW system makes here, on this roof. */
+  function yieldPerKw(regionId, orientation) {
+    const region = window.NZ_REGIONS.find(r => r.id === regionId) || window.NZ_REGIONS[0];
+    return region.yield * A().orientationFactor[orientation];
+  }
+
+  /* How much of a year's power this household uses in daylight — the load
+     solar can actually serve without a battery. */
+  function daytimeLoadKwh(usageKwh, occupancy) {
+    return usageKwh * A().daytimeUsageShare[occupancy];
+  }
+
+  /* Pick a system size. We size to the daylight load, NOT to the whole bill.
+     Sizing to the whole bill on a big power user produces an oversized array
+     that dumps cheap power back to the grid and pays back slower. Then snap
+     to the nearest real-world size we have pricing for. */
+  function chooseSystem(daytimeKwh, perKw) {
+    const a = A();
+    const idealKw = daytimeKwh / perKw;
+    const table = window.SOLAR_CONFIG.pricingOverride || window.NZ_SYSTEM_PRICING;
+
+    let best = table[0];
+    let bestGap = Infinity;
+    for (const row of table) {
+      const gap = Math.abs(row.kw - idealKw);
+      if (gap < bestGap) { bestGap = gap; best = row; }
+    }
+    return best;
+  }
+
+  /* Amortised monthly repayment. At 0% it's just the amount divided by the
+     number of months. */
+  function monthlyRepayment(principal, annualRate, years) {
+    const n = years * 12;
+    if (annualRate === 0) return principal / n;
+    const r = annualRate / 12;
+    return (principal * r) / (1 - Math.pow(1 + r, -n));
+  }
+
+  /* Work out what finance, if any, this person can actually get.
+     Deliberately strict: no mortgage with that bank, or under 20% equity,
+     means no green loan. We say so plainly rather than dangling a rate. */
+  function finance(answers, systemCost) {
+    const noLoan = { eligible: false };
+
+    if (answers.ownership !== "mortgage") {
+      return Object.assign({}, noLoan, {
+        reason: answers.ownership === "outright"
+          ? "Green loans are top-ups on an existing mortgage, so owning outright means you can't use one. Cash or an installer finance plan are your options."
+          : "Green loans need an existing mortgage."
+      });
+    }
+
+    const loan = window.NZ_GREEN_LOANS[answers.bank];
+    if (!loan || loan.kind === "none") {
+      return Object.assign({}, noLoan, {
+        reason: "Your bank doesn't currently offer a solar green loan. Worth asking them anyway — and most installers offer their own finance."
+      });
+    }
+
+    if (answers.equity !== "20plus") {
+      return Object.assign({}, noLoan, {
+        bank: loan.bank,
+        reason: answers.equity === "under20"
+          ? loan.bank + " green loans need about 20% equity in your home. Under that, you'd be looking at cash or installer finance."
+          : loan.bank + " green loans need about 20% equity. Worth checking your balance before you count on it."
+      });
+    }
+
+    if (loan.kind === "cashback") {
+      return {
+        eligible: true, kind: "cashback", bank: loan.bank,
+        product: loan.product, cashback: loan.cashback,
+        seanz: loan.requiresSeanzInstaller
+      };
+    }
+
+    const borrowed = Math.min(systemCost, loan.cap);
+    return {
+      eligible: true, kind: "loan", bank: loan.bank, product: loan.product,
+      rate: loan.rate, termYears: loan.termYears, cap: loan.cap,
+      borrowed: borrowed,
+      monthly: monthlyRepayment(borrowed, loan.rate, loan.termYears),
+      seanz: loan.requiresSeanzInstaller
+    };
+  }
+
+  /* Consent check. All we can honestly test from our questions is panel
+     area, so this is always framed as "likely" and the installer confirms. */
+  function consent(panelCount) {
+    const a = A();
+    const area = panelCount * a.panelAreaM2;
+    return {
+      areaM2: area,
+      likelyExempt: area < window.NZ_CONSENT.exemptAreaM2,
+      limitM2: window.NZ_CONSENT.exemptAreaM2
+    };
+  }
+
+  /* Project savings year by year, so we can find the payback point and draw
+     the chart. Each year: panels degrade slightly, power prices rise, and we
+     subtract the inverter replacement when it falls due. */
+  function project(generationYearOne, daytimeKwh, systemCost) {
+    const a = A();
+    const years = [];
+    let cumulative = 0;
+    let payback = null;
+
+    for (let y = 1; y <= a.analysisYears; y++) {
+      const degraded = generationYearOne * Math.pow(1 - a.panelDegradationPerYear, y - 1);
+
+      // They can only use what they generate, and only up to their daylight
+      // demand. Everything above that gets exported at the lower rate.
+      const selfUsed = Math.min(degraded, daytimeKwh) * a.solarLoadMatch;
+      const exported = Math.max(degraded - selfUsed, 0);
+
+      // Power they buy gets dearer each year, which makes the power they
+      // DON'T buy worth more. We hold the export rate flat — buyback rates
+      // have not tracked retail prices, and assuming they would overstates
+      // the case.
+      const buyRate = a.buyRatePerKwh * Math.pow(1 + a.electricityInflation, y - 1);
+      let saving = selfUsed * buyRate + exported * a.sellRatePerKwh;
+
+      let inverter = 0;
+      if (y === a.inverterReplacement.year) {
+        inverter = a.inverterReplacement.cost;
+        saving -= inverter;
+      }
+
+      const before = cumulative;
+      cumulative += saving;
+
+      // The year the total savings overtake what they paid. We interpolate
+      // so we can say "9.5 years" rather than jumping from 9 to 10.
+      if (payback === null && cumulative >= systemCost) {
+        const through = (systemCost - before) / (cumulative - before);
+        payback = (y - 1) + through;
+      }
+
+      years.push({
+        year: y, generation: degraded, selfUsed, exported,
+        saving, inverter, cumulative
+      });
+    }
+
+    return { years, payback, total: cumulative };
+  }
+
+  /* Put it all together. `answers` is what the homeowner told us. */
+  function run(answers) {
+    const a = A();
+
+    const usageKwh  = annualUsageKwh(answers.monthlyBill);
+    const perKw     = yieldPerKw(answers.region, answers.orientation);
+    const daytime   = daytimeLoadKwh(usageKwh, answers.occupancy);
+    const system    = chooseSystem(daytime, perKw);
+
+    const generation = system.kw * perKw;
+    const panelCount = Math.ceil((system.kw * 1000) / a.panelWatts);
+
+    const costMid = (system.low + system.high) / 2;
+    const proj    = project(generation, daytime, costMid);
+
+    // The share of everything generated that gets used in the house rather
+    // than exported. Worth showing — it's what makes the numbers work.
+    const scr = proj.years[0].selfUsed / proj.years[0].generation;
+
+    const yearOne     = proj.years[0];
+    const annualBill  = answers.monthlyBill * 12;
+    const billOffset  = Math.min(yearOne.saving / annualBill, 0.95);
+
+    // What the bill drifts to in 10 years if they do nothing.
+    const billIn10 = answers.monthlyBill * Math.pow(1 + a.electricityInflation, 10);
+
+    // Range on 25-year savings: low end assumes they self-consume less than
+    // we think and prices rise slower; high end the reverse. Gives an honest
+    // spread rather than one falsely precise number.
+    const savingsLow  = proj.total * 0.80;
+    const savingsHigh = proj.total * 1.25;
+
+    return {
+      answers,
+      usageKwh,
+      daytimeKwh: daytime,
+      yieldPerKw: perKw,
+      system,
+      panelCount,
+      generation,
+      selfConsumptionRate: scr,
+      cost: { low: system.low, high: system.high, mid: costMid },
+      annualSaving: yearOne.saving,
+      monthlyBillBefore: answers.monthlyBill,
+      monthlyBillAfter: Math.max(answers.monthlyBill - yearOne.saving / 12, 0),
+      monthlyBillIn10IfNothing: billIn10,
+      billOffset,
+      payback: proj.payback,
+      projection: proj.years,
+      savings25: { low: savingsLow, high: savingsHigh, mid: proj.total },
+      finance: finance(answers, costMid),
+      consent: consent(panelCount)
+    };
+  }
+
+  return { run, annualUsageKwh, daytimeLoadKwh, yieldPerKw, chooseSystem, monthlyRepayment };
+})();
+
+</script>
+<script>
+/* ============================================================================
+   THE PAGE. Runs the question flow, then draws the results.
+   Reads everything it needs from config.js — no client details live in here.
+   ============================================================================ */
+
+(function () {
+  "use strict";
+
+  const CFG = window.SOLAR_CONFIG;
+  const answers = {};
+  let stepIndex = 0;
+  let submitted = false;
+
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+
+  /* --- Formatting ---------------------------------------------------------- */
+  const money = n => "$" + Math.round(n).toLocaleString("en-NZ");
+  const moneyRange = (a, b) => money(a) + "–" + money(b);
+  const pct = n => Math.round(n * 100) + "%";
+  const years = n => (n >= 25 || n == null) ? "25+ years" :
+                     (n < 10 ? n.toFixed(1) : Math.round(n)) + " years";
+
+  /* --- Brand: paint the client's colour over the design tokens ------------- */
+  function applyBrand() {
+    const s = document.createElement("style");
+    s.textContent =
+      ":root{--brand:" + CFG.brand.accent + ";--brand-wash:" +
+        CFG.brand.accent + "1A;}" +
+      "@media (prefers-color-scheme: dark){:root:not([data-theme='light']){--brand:" +
+        CFG.brand.accentDark + ";--brand-wash:" + CFG.brand.accentDark + "26;}}" +
+      ":root[data-theme='dark']{--brand:" + CFG.brand.accentDark +
+        ";--brand-wash:" + CFG.brand.accentDark + "26;}";
+    document.head.appendChild(s);
+  }
+
+  function renderMasthead() {
+    const brand = $("brand");
+    brand.innerHTML = "";
+    if (CFG.client.logoUrl) {
+      const img = el("img");
+      img.src = CFG.client.logoUrl;
+      img.alt = CFG.client.name;
+      // If the logo 404s, fall back to the name rather than showing a broken image.
+      img.onerror = () => { img.remove(); brand.prepend(nameBlock()); };
+      brand.appendChild(img);
+    } else {
+      brand.appendChild(nameBlock());
+    }
+    const phone = $("masthead-phone");
+    if (CFG.client.phone) {
+      phone.textContent = CFG.client.phone;
+      phone.href = "tel:" + CFG.client.phone.replace(/\s/g, "");
+    } else {
+      phone.hidden = true;
+    }
+  }
+  function nameBlock() {
+    const w = el("div");
+    w.appendChild(el("div", "brand-name", CFG.client.name));
+    if (CFG.client.tagline) w.appendChild(el("div", "brand-tag", CFG.client.tagline));
+    return w;
+  }
+
+  /* ==========================================================================
+     THE QUESTIONS
+     Each step knows how to draw itself and what to write into the rail.
+     ========================================================================== */
+
+  const STEPS = [
+    {
+      id: "monthlyBill",
+      question: "What's your power bill in a normal month?",
+      why: "This is the single most important number. Everything else — system size, savings, payback — is worked back from it.",
+      railLabel: "Power bill",
+      railValue: v => money(v) + "/month",
+      render: renderBill
+    },
+    {
+      id: "region",
+      question: "Whereabouts in New Zealand are you?",
+      why: "Sunshine hours vary a lot across the country, and that changes how much power the same panels make.",
+      railLabel: "Region",
+      railValue: v => (window.NZ_REGIONS.find(r => r.id === v) || {}).name || v,
+      skip: () => CFG.region.lockToDefault,
+      render: s => renderOptions(s, window.NZ_REGIONS.map(r => ({ value: r.id, label: r.name })))
+    },
+    {
+      id: "orientation",
+      question: "Which way does your roof face?",
+      why: "North catches the most sun in New Zealand. East–west still works well. South is the hard one.",
+      railLabel: "Roof",
+      railValue: v => ({ north: "North facing", eastWest: "East–west", south: "South facing", unsure: "Not sure yet" })[v],
+      render: s => renderOptions(s, [
+        { value: "north",    label: "Mostly north",   note: "The best case here" },
+        { value: "eastWest", label: "East and west",  note: "Very common, works well" },
+        { value: "south",    label: "Mostly south",   note: "Harder, but not a dead end" },
+        { value: "unsure",   label: "I'm not sure",   note: "We'll assume a typical roof" }
+      ], "two-up")
+    },
+    {
+      id: "ownership",
+      question: "Do you own the home?",
+      why: "It decides what finance you can get — and whether solar is your call to make at all.",
+      railLabel: "Ownership",
+      railValue: v => ({ mortgage: "Own, with mortgage", outright: "Own outright", renting: "Renting" })[v],
+      render: s => renderOptions(s, [
+        { value: "mortgage", label: "Yes, with a mortgage", note: "May open up a low-rate green loan" },
+        { value: "outright", label: "Yes, owned outright",  note: "No mortgage on it" },
+        { value: "renting",  label: "No, I rent",           note: "" }
+      ])
+    },
+    {
+      id: "bank",
+      question: "Who's your mortgage with?",
+      why: "Every solar green loan in New Zealand is a top-up on an existing mortgage with that same bank. So the answer here decides whether you get one at all.",
+      railLabel: "Bank",
+      railValue: v => (window.NZ_GREEN_LOANS[v] || {}).bank || v,
+      // Counted in the total until we know they don't need it, so the
+      // question count never grows on someone mid-flow.
+      skip: () => answers.ownership != null && answers.ownership !== "mortgage",
+      render: s => renderOptions(s, [
+        { value: "anz",      label: "ANZ" },
+        { value: "asb",      label: "ASB" },
+        { value: "bnz",      label: "BNZ" },
+        { value: "westpac",  label: "Westpac" },
+        { value: "kiwibank", label: "Kiwibank" },
+        { value: "other",    label: "Another bank" }
+      ], "two-up")
+    },
+    {
+      id: "equity",
+      question: "Roughly how much equity do you have?",
+      why: "Green loans generally need about 20% equity. We'd rather tell you that now than have a bank tell you later.",
+      railLabel: "Equity",
+      railValue: v => ({ "20plus": "20% or more", under20: "Under 20%", unsure: "Not sure" })[v],
+      skip: () => answers.ownership != null && answers.ownership !== "mortgage",
+      render: s => renderOptions(s, [
+        { value: "20plus",  label: "20% or more",  note: "The usual threshold" },
+        { value: "under20", label: "Less than 20%" },
+        { value: "unsure",  label: "Not sure" }
+      ])
+    },
+    {
+      id: "occupancy",
+      question: "Is anyone usually home during the day?",
+      why: "Power you use as the panels make it is worth about 27c a unit. Power you export is worth about 17c. So this changes the numbers more than almost anything else.",
+      railLabel: "Daytime",
+      railValue: v => ({ home: "Home during day", mixed: "Sometimes home", out: "Out during day" })[v],
+      render: s => renderOptions(s, [
+        { value: "home",  label: "Usually someone home", note: "Shift work, working from home, retired, young family" },
+        { value: "mixed", label: "Some days",            note: "A mix through the week" },
+        { value: "out",   label: "Usually out",          note: "Out at work weekdays" }
+      ])
+    },
+    {
+      id: "contact",
+      question: "Where should we send it?",
+      why: "Your results are on the next screen either way — this is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
+      render: renderContact
+    }
+  ];
+
+  const liveSteps = () => STEPS.filter(s => !(s.skip && s.skip()));
+
+  /* --- Rail: the answers so far, as meter readings ------------------------- */
+  function renderRail() {
+    const rail = $("rail");
+    rail.innerHTML = "";
+    const recorded = STEPS.filter(s =>
+      s.railLabel && answers[s.id] != null && !(s.skip && s.skip())
+    );
+
+    if (!recorded.length) {
+      const li = el("li", "rail-empty",
+        "Seven questions. No address, no roof scan, no phone call — a real estimate at the end of it.");
+      rail.appendChild(li);
+      return;
+    }
+    recorded.forEach(s => {
+      const li = el("li", "rail-item");
+      li.appendChild(el("span", "rail-label", s.railLabel));
+      li.appendChild(el("span", "rail-value", s.railValue(answers[s.id])));
+      rail.appendChild(li);
+    });
+  }
+
+  /* --- Draw the current step ----------------------------------------------- */
+  function render() {
+    const steps = liveSteps();
+    const step = steps[stepIndex];
+    const panel = $("panel");
+    panel.innerHTML = "";
+
+    $("progress-fill").style.width = ((stepIndex / steps.length) * 100) + "%";
+
+    const wrap = el("div", "question");
+    wrap.appendChild(el("p", "eyebrow", "Question " + (stepIndex + 1) + " of " + steps.length));
+    const h = el("h2", null, step.question);
+    wrap.appendChild(h);
+    if (step.why) wrap.appendChild(el("p", "question-why", step.why));
+    panel.appendChild(wrap);
+
+    step.render(step, wrap);
+    renderRail();
+    h.setAttribute("tabindex", "-1");
+    if (stepIndex > 0) h.focus({ preventScroll: true });
+    reportHeight();
+  }
+
+  function advance() {
+    // Renting is a graceful dead end — they can't authorise an install.
+    if (answers.ownership === "renting") return renderRenterExit();
+    const steps = liveSteps();
+    if (stepIndex < steps.length - 1) { stepIndex++; render(); }
+  }
+  function back() { if (stepIndex > 0) { stepIndex--; render(); } }
+
+  /* --- Option list ---------------------------------------------------------- */
+  function renderOptions(step, options, layout) {
+    const list = el("div", "options" + (layout ? " " + layout : ""));
+    options.forEach((opt, i) => {
+      const b = el("button", "option");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(answers[step.id] === opt.value));
+      b.appendChild(el("span", "option-key", String(i + 1)));
+      const body = el("div", "option-body");
+      body.appendChild(el("span", "option-label", opt.label));
+      if (opt.note) body.appendChild(el("span", "option-note", opt.note));
+      b.appendChild(body);
+      b.addEventListener("click", () => {
+        answers[step.id] = opt.value;
+        // Changing ownership invalidates the finance answers behind it.
+        if (step.id === "ownership" && opt.value !== "mortgage") {
+          delete answers.bank; delete answers.equity;
+        }
+        list.querySelectorAll(".option").forEach(o => o.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        renderRail();
+        setTimeout(advance, 140);
+      });
+      list.appendChild(b);
+    });
+    step.__panel = list;
+    $("panel").querySelector(".question").appendChild(list);
+    if (stepIndex > 0) addBack();
+  }
+
+  /* --- Bill slider ---------------------------------------------------------- */
+  function renderBill(step) {
+    const q = $("panel").querySelector(".question");
+    if (answers.monthlyBill == null) answers.monthlyBill = 280;
+
+    const wrap = el("div", "bill");
+    const readout = el("div", "bill-readout mono");
+    const setReadout = v => {
+      readout.innerHTML = "";
+      readout.appendChild(document.createTextNode("$" + v));
+      readout.appendChild(el("span", null, "/month"));
+    };
+    setReadout(answers.monthlyBill);
+
+    const slider = el("input", "bill-slider");
+    slider.type = "range";
+    slider.min = 80; slider.max = 1000; slider.step = 10;
+    slider.value = answers.monthlyBill;
+    slider.setAttribute("aria-label", "Average monthly power bill in dollars");
+    slider.addEventListener("input", () => {
+      answers.monthlyBill = Number(slider.value);
+      setReadout(answers.monthlyBill);
+      renderRail();
+    });
+
+    const scale = el("div", "bill-scale");
+    scale.appendChild(el("span", null, "$80"));
+    scale.appendChild(el("span", null, "$1,000+"));
+
+    wrap.appendChild(readout);
+    wrap.appendChild(slider);
+    wrap.appendChild(scale);
+    q.appendChild(wrap);
+
+    const actions = el("div", "actions");
+    const next = el("button", "btn btn-primary", "Continue");
+    next.type = "button";
+    next.addEventListener("click", advance);
+    actions.appendChild(next);
+    q.appendChild(actions);
+  }
+
+  function addBack() {
+    const q = $("panel").querySelector(".question");
+    const actions = el("div", "actions");
+    const b = el("button", "btn-link", "Back");
+    b.type = "button";
+    b.addEventListener("click", back);
+    actions.appendChild(b);
+    q.appendChild(actions);
+  }
+
+  /* --- Renter exit: honest, quick, and not a lead -------------------------- */
+  function renderRenterExit() {
+    const panel = $("panel");
+    panel.innerHTML = "";
+    const wrap = el("div", "question");
+    wrap.appendChild(el("p", "eyebrow", "One thing first"));
+    wrap.appendChild(el("h2", null, "Solar is your landlord's call, not yours."));
+    const body = el("div", "exit");
+    body.appendChild(el("p", null,
+      "Panels get fixed to the roof and paid off over years, so the decision sits with whoever owns the place. There's no version of this where we can quote you directly, and we'd rather say that than take your details."));
+    body.appendChild(el("p", null,
+      "If you'd like to raise it with your landlord, it's a genuinely good pitch: solar lifts a property's value and its Homestar rating, and the tenant sees the lower bills. Send them here."));
+    wrap.appendChild(body);
+
+    const actions = el("div", "actions");
+    const b = el("button", "btn btn-quiet", "Actually, I own this home");
+    b.type = "button";
+    b.addEventListener("click", () => { delete answers.ownership; render(); });
+    actions.appendChild(b);
+    wrap.appendChild(actions);
+    panel.appendChild(wrap);
+    $("progress-fill").style.width = "100%";
+    renderRail();
+    reportHeight();
+  }
+
+  /* --- Contact capture ------------------------------------------------------ */
+  function renderContact(step) {
+    const q = $("panel").querySelector(".question");
+    const form = el("form", "form");
+    form.noValidate = true;
+
+    const fields = [
+      { name: "firstName", label: "First name",   type: "text",  autocomplete: "given-name",  required: true },
+      { name: "lastName",  label: "Last name",    type: "text",  autocomplete: "family-name", required: false },
+      { name: "email",     label: "Email",        type: "email", autocomplete: "email",       required: true },
+      { name: "phone",     label: "Phone",        type: "tel",   autocomplete: "tel",         required: CFG.leads.requirePhone }
+    ];
+
+    fields.forEach(f => {
+      const wrap = el("div", "field");
+      const id = "f-" + f.name;
+      const label = el("label", null, f.label + (f.required ? "" : " (optional)"));
+      label.htmlFor = id;
+      const input = el("input");
+      input.id = id; input.name = f.name; input.type = f.type;
+      input.autocomplete = f.autocomplete;
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      form.appendChild(wrap);
+    });
+
+    const err = el("p", "field-error");
+    err.hidden = true;
+    form.appendChild(err);
+
+    const actions = el("div", "actions");
+    const submit = el("button", "btn btn-primary", "Show me the numbers");
+    submit.type = "submit";
+    actions.appendChild(submit);
+    const b = el("button", "btn-link", "Back");
+    b.type = "button";
+    b.addEventListener("click", back);
+    actions.appendChild(b);
+    form.appendChild(actions);
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const data = {};
+      fields.forEach(f => { data[f.name] = form.elements[f.name].value.trim(); });
+
+      const missing = fields.find(f => f.required && !data[f.name]);
+      if (missing) return showError(err, "We need your " + missing.label.toLowerCase() + " to send this through.");
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email))
+        return showError(err, "That email doesn't look right — mind checking it?");
+
+      err.hidden = true;
+      answers.contact = data;
+      submit.disabled = true;
+      submit.textContent = "Working it out…";
+      finish();
+    });
+
+    q.appendChild(form);
+    const note = el("p", "form-note",
+      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof — no obligation, and no third parties.");
+    q.appendChild(note);
+  }
+
+  function showError(node, message) {
+    node.textContent = message;
+    node.hidden = false;
+    reportHeight();
+  }
+
+  /* ==========================================================================
+     SUBMIT — push the lead, fire the tracking, then show the results.
+     The results show whether or not the webhook succeeds. Never punish the
+     homeowner for our plumbing failing.
+     ========================================================================== */
+  function finish() {
+    const result = window.SolarCalc.run(answers);
+    sendLead(result);
+    track(result);
+    submitted = true;
+    renderResults(result);
+  }
+
+  function sendLead(result) {
+    const payload = {
+      first_name: answers.contact.firstName,
+      last_name:  answers.contact.lastName,
+      email:      answers.contact.email,
+      phone:      answers.contact.phone,
+      source:     "Solar savings calculator",
+      // Everything the installer needs to pick up the phone already informed.
+      monthly_power_bill:   answers.monthlyBill,
+      region:               answers.region || CFG.region.default,
+      roof_orientation:     answers.orientation,
+      ownership:            answers.ownership,
+      mortgage_bank:        answers.bank || "",
+      equity:               answers.equity || "",
+      daytime_occupancy:    answers.occupancy,
+      estimated_system_kw:  result.system.kw,
+      estimated_panels:     result.panelCount,
+      estimated_cost_low:   result.cost.low,
+      estimated_cost_high:  result.cost.high,
+      estimated_annual_saving: Math.round(result.annualSaving),
+      estimated_payback_years: result.payback ? Number(result.payback.toFixed(1)) : null,
+      green_loan_eligible:  result.finance.eligible,
+      green_loan_product:   result.finance.product || "",
+      consent_likely_exempt: result.consent.likelyExempt,
+      submitted_at: new Date().toISOString()
+    };
+
+    if (!CFG.leads.webhookUrl) {
+      console.log("[calculator] No webhookUrl set in config.js. Lead payload:", payload);
+      return;
+    }
+    fetch(CFG.leads.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error("[calculator] Lead POST failed:", err));
+  }
+
+  function track(result) {
+    const value = Math.round(result.cost.mid);
+    if (window.fbq) window.fbq("track", "Lead", { value: value, currency: "NZD" });
+    if (window.gtag) window.gtag("event", "generate_lead", { value: value, currency: "NZD" });
+    // Let a parent page (e.g. a GoHighLevel funnel) fire its own tracking too.
+    post({ type: "solar-calculator:lead", value: value });
+  }
+
+  /* ==========================================================================
+     RESULTS
+     ========================================================================== */
+  function renderResults(r) {
+    $("stage").hidden = true;
+    $("progress-fill").style.width = "100%";
+    const out = $("results");
+    out.hidden = false;
+    out.className = "results";
+    out.innerHTML = "";
+
+    const name = answers.contact.firstName;
+    const worthIt = r.payback && r.payback <= 12;
+
+    /* Verdict */
+    const verdict = el("h1", "verdict");
+    if (worthIt) {
+      verdict.innerHTML = name + ", solar could take <em>" + pct(r.billOffset) +
+        "</em> off your power bill.";
+    } else {
+      verdict.innerHTML = name + ", solar would work here — but it's a <em>long</em> payback.";
+    }
+    out.appendChild(verdict);
+
+    const sub = el("p", "verdict-sub");
+    sub.textContent = worthIt
+      ? "About " + money(r.annualSaving) + " a year, from " + r.panelCount +
+        " panels on your roof. Worked out on your bill and Hawke's Bay sunshine, not a national average."
+      : "Your power bill is modest enough that the system takes a while to pay for itself. Here are the real numbers rather than a sales pitch.";
+    out.appendChild(sub);
+
+    /* Headline figures */
+    const figures = el("div", "figures");
+    [
+      { label: "Your system",   value: r.system.kw + " kW",
+        note: r.panelCount + " panels, about " + Math.round(r.consent.areaM2) + "m² of roof" },
+      { label: "Installed cost", value: moneyRange(r.cost.low, r.cost.high),
+        note: "Incl. GST. Confirmed on site." },
+      { label: "Saved per year", value: money(r.annualSaving), cls: "is-gain",
+        note: "In year one, rising as power prices do" },
+      { label: "Pays for itself", value: years(r.payback), cls: worthIt ? "is-gain" : "is-flag",
+        note: "Then " + years(25 - (r.payback || 25)).replace("25+ years", "20+ years") + " of savings" }
+    ].forEach(f => {
+      const c = el("div", "figure");
+      c.appendChild(el("span", "figure-label", f.label));
+      c.appendChild(el("span", "figure-value mono " + (f.cls || ""), f.value));
+      c.appendChild(el("span", "figure-note", f.note));
+      figures.appendChild(c);
+    });
+    out.appendChild(figures);
+
+    out.appendChild(billSection(r));
+    out.appendChild(chartSection(r));
+    out.appendChild(detailSection(r));
+    out.appendChild(assumptionsSection(r));
+    out.appendChild(ctaSection(r));
+
+    const d = el("p", "disclaimer");
+    d.textContent = "These are estimates, not a quote. They're built from your power bill, " +
+      "regional sunshine figures and 2026 New Zealand install pricing — but every roof is different. " +
+      CFG.client.name + " will confirm the numbers on site before you commit to anything.";
+    out.appendChild(d);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    reportHeight();
+    setTimeout(reportHeight, 700);
+  }
+
+  /* Bill comparison bars */
+  function billSection(r) {
+    const s = el("section", "section");
+    s.appendChild(el("h3", null, "What happens to your bill"));
+    s.appendChild(el("p", "section-lede",
+      "Doing nothing isn't holding steady — New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
+
+    const max = Math.max(r.monthlyBillIn10IfNothing, r.monthlyBillBefore, r.monthlyBillAfter);
+    const bars = el("div", "bars");
+    [
+      { label: "Now",                       v: r.monthlyBillBefore,        cls: "is-now" },
+      { label: "With solar",                v: r.monthlyBillAfter,         cls: "is-solar" },
+      { label: "In 10 years, if you don't", v: r.monthlyBillIn10IfNothing, cls: "is-drift" }
+    ].forEach(b => {
+      const row = el("div", "bar-row");
+      row.appendChild(el("div", "bar-label", b.label));
+      const track = el("div", "bar-track");
+      const fill = el("div", "bar-fill " + b.cls);
+      fill.style.width = "0%";
+      requestAnimationFrame(() => { fill.style.width = ((b.v / max) * 100) + "%"; });
+      track.appendChild(fill);
+      track.appendChild(el("span", "bar-value mono", money(b.v) + "/mo"));
+      row.appendChild(track);
+      bars.appendChild(row);
+    });
+    s.appendChild(bars);
+    return s;
+  }
+
+  /* 25-year cumulative savings chart, drawn as inline SVG */
+  function chartSection(r) {
+    const s = el("section", "section");
+    s.appendChild(el("h3", null, "The next 25 years"));
+    s.appendChild(el("p", "section-lede",
+      "Total savings against what you paid. Where the line crosses zero, the system has paid for itself. The dip at year " +
+      CFG.assumptions.inverterReplacement.year + " is a replacement inverter — we count it rather than pretend it away."));
+
+    const W = 720, H = 280, PAD_L = 62, PAD_R = 16, PAD_T = 18, PAD_B = 34;
+    const cost = r.cost.mid;
+    const net = r.projection.map(p => p.cumulative - cost);
+    const lo = Math.min(-cost, ...net), hi = Math.max(...net, 0);
+    const x = i => PAD_L + (i / (net.length - 1)) * (W - PAD_L - PAD_R);
+    const y = v => PAD_T + (1 - (v - lo) / (hi - lo)) * (H - PAD_T - PAD_B);
+
+    let path = "M " + PAD_L + " " + y(-cost);
+    net.forEach((v, i) => { path += " L " + x(i).toFixed(1) + " " + y(v).toFixed(1); });
+
+    const area = path + " L " + x(net.length - 1).toFixed(1) + " " + y(0).toFixed(1) +
+                 " L " + PAD_L + " " + y(0).toFixed(1) + " Z";
+
+    const ticks = [lo, (lo + hi) / 2, 0, hi].filter((v, i, a) => a.indexOf(v) === i);
+    const svg = [
+      '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cumulative savings over 25 years, breaking even at ' + years(r.payback) + '">',
+      '<defs><linearGradient id="fillG" x1="0" y1="0" x2="0" y2="1">',
+      '<stop offset="0%" stop-color="var(--brand)" stop-opacity=".22"/>',
+      '<stop offset="100%" stop-color="var(--brand)" stop-opacity="0"/>',
+      '</linearGradient></defs>'
+    ];
+    ticks.forEach(v => {
+      svg.push('<line x1="' + PAD_L + '" x2="' + (W - PAD_R) + '" y1="' + y(v).toFixed(1) +
+               '" y2="' + y(v).toFixed(1) + '" stroke="var(--line)" stroke-width="1"' +
+               (v === 0 ? '' : ' stroke-dasharray="2 4"') + '/>');
+      svg.push('<text x="' + (PAD_L - 10) + '" y="' + (y(v) + 4).toFixed(1) +
+               '" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">' +
+               (v === 0 ? "$0" : (v < 0 ? "-" : "") + "$" + Math.round(Math.abs(v) / 1000) + "k") + '</text>');
+    });
+    svg.push('<path d="' + area + '" fill="url(#fillG)"/>');
+    svg.push('<path d="' + path + '" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round"/>');
+
+    if (r.payback && r.payback < 25) {
+      const px = x(r.payback - 1);
+      svg.push('<line x1="' + px.toFixed(1) + '" x2="' + px.toFixed(1) + '" y1="' + PAD_T +
+               '" y2="' + (H - PAD_B) + '" stroke="var(--flag)" stroke-width="1" stroke-dasharray="3 3"/>');
+      svg.push('<circle cx="' + px.toFixed(1) + '" cy="' + y(0).toFixed(1) +
+               '" r="4.5" fill="var(--flag)"/>');
+      svg.push('<text x="' + (px + 9).toFixed(1) + '" y="' + (PAD_T + 14) +
+               '" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--flag)">Paid off · ' +
+               years(r.payback) + '</text>');
+    }
+    [1, 5, 10, 15, 20, 25].forEach(yr => {
+      svg.push('<text x="' + x(yr - 1).toFixed(1) + '" y="' + (H - 12) +
+               '" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--ink-3)">' +
+               (yr === 1 ? "Yr 1" : yr) + '</text>');
+    });
+    svg.push('</svg>');
+
+    const wrap = el("div", "chart-wrap");
+    wrap.innerHTML = svg.join("");
+    s.appendChild(wrap);
+
+    const legend = el("div", "chart-legend");
+    legend.innerHTML =
+      '<span><i class="swatch" style="background:var(--brand)"></i>Money ahead, after paying for the system</span>' +
+      '<span><i class="swatch" style="background:var(--flag)"></i>Break-even point</span>';
+    s.appendChild(legend);
+
+    const total = el("p", "section-lede");
+    total.style.marginTop = "1.1rem";
+    total.textContent = "Over 25 years that's roughly " +
+      moneyRange(r.savings25.low, r.savings25.high) +
+      " back in your pocket, after the system and a replacement inverter are paid for.";
+    s.appendChild(total);
+    return s;
+  }
+
+  /* Finance + consent */
+  function detailSection(r) {
+    const s = el("section", "section");
+    s.appendChild(el("h3", null, "Paying for it, and the paperwork"));
+    const cards = el("div", "cards");
+
+    /* --- Finance --- */
+    const fin = el("div", "card");
+    const f = r.finance;
+    if (f.eligible && f.kind === "loan") {
+      fin.className = "card is-good";
+      fin.appendChild(pill("You likely qualify", "is-good"));
+      fin.appendChild(el("h4", null, f.product));
+      fin.appendChild(el("div", "card-figure mono", money(f.monthly) + "/month"));
+      fin.appendChild(el("p", null,
+        (f.rate === 0 ? "At 0% interest" : "At " + (f.rate * 100) + "% interest") +
+        " over " + f.termYears + " years on " + money(f.borrowed) + ". " +
+        "Your monthly saving of " + money(r.annualSaving / 12) +
+        (r.annualSaving / 12 >= f.monthly
+          ? " more than covers that repayment from day one."
+          : " covers most of it, so you're out of pocket about " +
+            money(f.monthly - r.annualSaving / 12) + " a month until it's paid off.") +
+        (f.seanz ? " " + f.bank + " require a SEANZ-accredited installer." : "")));
+    } else if (f.eligible && f.kind === "cashback") {
+      fin.className = "card is-good";
+      fin.appendChild(pill("You likely qualify", "is-good"));
+      fin.appendChild(el("h4", null, f.product));
+      fin.appendChild(el("div", "card-figure mono", money(f.cashback)));
+      fin.appendChild(el("p", null,
+        f.bank + " give a " + money(f.cashback) + " cashback on solar rather than a discounted rate, so you'd be paying standard rates on the balance." +
+        (f.seanz ? " They require a SEANZ-accredited installer." : "")));
+    } else {
+      fin.appendChild(pill("No green loan", "is-warn"));
+      fin.appendChild(el("h4", null, "How you'd pay for it"));
+      fin.appendChild(el("p", null, f.reason));
+    }
+    cards.appendChild(fin);
+
+    /* --- Consent --- */
+    const con = el("div", "card");
+    const c = r.consent;
+    if (c.likelyExempt) {
+      con.className = "card is-good";
+      con.appendChild(pill("Likely no consent", "is-good"));
+      con.appendChild(el("h4", null, "You probably don't need building consent"));
+      con.appendChild(el("div", "card-figure mono", Math.round(c.areaM2) + "m²"));
+      con.appendChild(el("p", null,
+        "Since October 2025 most home solar installs are consent-exempt if the panels cover under " +
+        c.limitM2 + "m², the property is in a standard wind zone, and the panels sit flush or on standard frames. " +
+        "Yours is " + Math.round(c.areaM2) + "m². That saves roughly " +
+        moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
+        " and several weeks — " + CFG.client.name + " will confirm your wind zone."));
+    } else {
+      con.appendChild(pill("Consent likely", "is-warn"));
+      con.appendChild(el("h4", null, "This one probably needs consent"));
+      con.appendChild(el("div", "card-figure mono", Math.round(c.areaM2) + "m²"));
+      con.appendChild(el("p", null,
+        "The October 2025 exemption covers installs under " + c.limitM2 +
+        "m² of panels. At " + Math.round(c.areaM2) + "m² yours is over that, so budget another " +
+        moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
+        " and a few extra weeks. A slightly smaller system may duck under the line — worth asking about."));
+    }
+    cards.appendChild(con);
+
+    s.appendChild(cards);
+    return s;
+  }
+
+  function pill(text, cls) {
+    return el("span", "pill " + (cls || ""), text);
+  }
+
+  /* Show the working. Costs nothing and answers the sceptics. */
+  function assumptionsSection(r) {
+    const d = el("details", "assumptions");
+    const sum = el("summary", null, "The numbers behind this — every assumption we used");
+    d.appendChild(sum);
+    const a = CFG.assumptions;
+    const rows = [
+      ["Your power use, worked back from your bill", Math.round(r.usageKwh).toLocaleString("en-NZ") + " kWh/yr"],
+      ["Used during daylight, when panels are working", Math.round(r.daytimeKwh).toLocaleString("en-NZ") + " kWh/yr"],
+      ["What this system generates in year one", Math.round(r.generation).toLocaleString("en-NZ") + " kWh/yr"],
+      ["Of that, used in your home rather than exported", pct(r.selfConsumptionRate)],
+      ["Power you buy", (a.buyRatePerKwh * 100).toFixed(1) + "c/kWh"],
+      ["Power you sell back", (a.sellRatePerKwh * 100).toFixed(0) + "c/kWh"],
+      ["Daily fixed line charge", "$" + a.dailyFixedCharge.toFixed(2) + "/day"],
+      ["Power price rises, per year", pct(a.electricityInflation)],
+      ["Sunshine here", Math.round(r.yieldPerKw) + " kWh per kW installed"],
+      ["Panel output lost per year", (a.panelDegradationPerYear * 100).toFixed(1) + "%"],
+      ["Replacement inverter, year " + a.inverterReplacement.year, money(a.inverterReplacement.cost)]
+    ];
+    const table = el("table");
+    rows.forEach(([k, v]) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", null, k));
+      tr.appendChild(el("td", null, v));
+      table.appendChild(tr);
+    });
+    d.appendChild(table);
+    d.addEventListener("toggle", reportHeight);
+    return d;
+  }
+
+  function ctaSection(r) {
+    const s = el("section", "cta");
+    s.appendChild(el("h3", null, "Want these numbers checked on your actual roof?"));
+    const p = el("p", null,
+      CFG.client.proofPoint ? CFG.client.proofPoint :
+      CFG.client.name + " will confirm the estimate on site, at no cost.");
+    s.appendChild(p);
+    s.appendChild(el("p", null,
+      "We've sent a copy to " + answers.contact.email + ". Someone will be in touch to walk you through it."));
+
+    const actions = el("div", "cta-actions");
+    if (CFG.client.phone) {
+      const call = el("a", "btn btn-primary", "Call " + CFG.client.phone);
+      call.href = "tel:" + CFG.client.phone.replace(/\s/g, "");
+      actions.appendChild(call);
+    }
+    if (CFG.client.website) {
+      const site = el("a", "btn btn-quiet", "Visit " + CFG.client.name);
+      site.href = CFG.client.website;
+      site.target = "_blank";
+      site.rel = "noopener";
+      actions.appendChild(site);
+    }
+    s.appendChild(actions);
+    return s;
+  }
+
+  /* ==========================================================================
+     IFRAME SUPPORT
+     The page tells its parent how tall it is, so a GoHighLevel funnel can
+     resize the iframe instead of showing an inner scrollbar.
+     ========================================================================== */
+  function post(msg) {
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage(msg, "*"); } catch (e) {}
+    }
+  }
+  let lastHeight = 0;
+  function reportHeight() {
+    requestAnimationFrame(() => {
+      const h = Math.ceil(document.body.scrollHeight);
+      if (Math.abs(h - lastHeight) < 2) return;
+      lastHeight = h;
+      post({ type: "solar-calculator:height", height: h });
+    });
+  }
+
+  /* --- Ad tracking pixels, loaded from config ------------------------------ */
+  function loadTracking() {
+    const t = CFG.tracking;
+    if (t.metaPixelId) {
+      /* eslint-disable */
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+      (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      /* eslint-enable */
+      window.fbq("init", t.metaPixelId);
+      window.fbq("track", "PageView");
+    }
+    if (t.ga4MeasurementId) {
+      const g = document.createElement("script");
+      g.async = true;
+      g.src = "https://www.googletagmanager.com/gtag/js?id=" + t.ga4MeasurementId;
+      document.head.appendChild(g);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag("js", new Date());
+      window.gtag("config", t.ga4MeasurementId);
+    }
+  }
+
+  /* --- Go -------------------------------------------------------------------- */
+  applyBrand();
+  renderMasthead();
+  loadTracking();
+  if (CFG.region.lockToDefault) answers.region = CFG.region.default;
+  render();
+  window.addEventListener("resize", reportHeight);
+})();
+
+</script>
+</body>
+</html>
