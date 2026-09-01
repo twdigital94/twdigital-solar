@@ -7,7 +7,7 @@
 <meta name="description" content="See what solar would save on your power bill — system size, install cost, annual savings and payback, worked out on real New Zealand figures.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Poppins:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap">
 <style>
 /* ============================================================================
    NZ Solar Savings Calculator — styles
@@ -21,24 +21,32 @@
 
 /* --- Tokens. Light is the base; dark redefines only these values. --------- */
 :root {
-  --paper:      #F2F5F7;
+  --paper:      #F5F3EF;
   --surface:    #FFFFFF;
-  --surface-2:  #E8EEF2;
-  --ink:        #0E1922;
-  --ink-2:      #566875;
-  --ink-3:      #8496A3;
-  --line:       #D3DCE3;
-  --line-soft:  #E4EAEF;
-  --brand:      #17734A;
-  --brand-ink:  #FFFFFF;
-  --brand-wash: #E4EFE9;
-  --flag:       #8A5A00;
-  --flag-wash:  #F6EEDF;
+  --surface-2:  #EBE7E0;
+  --ink:        #2B2B2B;
+  --ink-2:      #6B665F;
+  --ink-3:      #9C958C;
+  --line:       #DDD7CE;
+  --line-soft:  #EAE5DD;
 
-  --shadow: 0 1px 2px rgba(14,25,34,.05), 0 8px 24px -12px rgba(14,25,34,.18);
+  /* --brand is a FILL. --brand-text is the same colour darkened until it can
+     be read on --paper; app.js computes it, so a yellow brand still gives
+     legible figures. --on-brand is the text that sits on top of the fill. */
+  --brand:      #F4A81C;
+  --brand-text: #8A5A00;
+  --on-brand:   #2B2B2B;
+  --brand-wash: #FBEFD8;
 
-  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --body:    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+  /* Cautions. Deliberately a rust rather than an amber, so it never reads as
+     the brand colour. */
+  --flag:       #A85832;
+  --flag-wash:  #F6E7E0;
+
+  --shadow: 0 1px 2px rgba(43,43,43,.05), 0 8px 24px -12px rgba(43,43,43,.20);
+
+  --display: "Poppins", "Helvetica Neue", Arial, sans-serif;
+  --body:    "Work Sans", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
   --mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --step:  clamp(1rem, .8rem + .6vw, 1.25rem);
@@ -48,36 +56,38 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper:      #0B1116;
-    --surface:    #141C23;
-    --surface-2:  #1C262F;
-    --ink:        #E6EDF2;
-    --ink-2:      #93A4B1;
-    --ink-3:      #647684;
-    --line:       #253039;
-    --line-soft:  #1D262E;
-    --brand:      #3FB37A;
-    --brand-ink:  #06140D;
-    --brand-wash: #10261B;
-    --flag:       #D9A441;
-    --flag-wash:  #241C0C;
+    --paper:      #1F1E1C;
+    --surface:    #2A2825;
+    --surface-2:  #35322D;
+    --ink:        #F1EEE8;
+    --ink-2:      #A9A29A;
+    --ink-3:      #79736B;
+    --line:       #3E3A34;
+    --line-soft:  #2F2C28;
+    --brand:      #FDB833;
+    --brand-text: #FDB833;
+    --on-brand:   #2B2B2B;
+    --brand-wash: #3A2E17;
+    --flag:       #D98A63;
+    --flag-wash:  #33231B;
     --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
   }
 }
 :root[data-theme="dark"] {
-  --paper:      #0B1116;
-  --surface:    #141C23;
-  --surface-2:  #1C262F;
-  --ink:        #E6EDF2;
-  --ink-2:      #93A4B1;
-  --ink-3:      #647684;
-  --line:       #253039;
-  --line-soft:  #1D262E;
-  --brand:      #3FB37A;
-  --brand-ink:  #06140D;
-  --brand-wash: #10261B;
-  --flag:       #D9A441;
-  --flag-wash:  #241C0C;
+  --paper:    #1F1E1C;
+  --surface:  #2A2825;
+  --surface-2:  #35322D;
+  --ink:    #F1EEE8;
+  --ink-2:    #A9A29A;
+  --ink-3:    #79736B;
+  --line:     #3E3A34;
+  --line-soft:  #2F2C28;
+  --brand:    #FDB833;
+  --brand-text: #FDB833;
+  --on-brand:   #2B2B2B;
+  --brand-wash: #3A2E17;
+  --flag:     #D98A63;
+  --flag-wash:  #33231B;
   --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
 }
 
@@ -127,7 +137,7 @@ button { font: inherit; color: inherit; }
   font-family: var(--mono); font-size: .82rem; color: var(--ink-2);
   text-decoration: none; white-space: nowrap;
 }
-.masthead-phone:hover { color: var(--brand); }
+.masthead-phone:hover { color: var(--brand-text); }
 
 /* The progress rule doubles as the page's only horizontal division. */
 .progress { height: 2px; background: var(--line); position: relative; overflow: hidden; }
@@ -193,7 +203,7 @@ button { font: inherit; color: inherit; }
   font-family: var(--mono); font-size: .68rem; color: var(--ink-3);
   flex: 0 0 auto; padding-top: .12rem;
 }
-.option[aria-pressed="true"] .option-key { color: var(--brand); }
+.option[aria-pressed="true"] .option-key { color: var(--brand-text); }
 .option-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
 .option-label { font-weight: 500; line-height: 1.3; }
 .option-note { font-size: .8rem; color: var(--ink-2); }
@@ -213,7 +223,7 @@ button { font: inherit; color: inherit; }
   transition: filter .15s, transform .1s, border-color .15s;
 }
 .btn:active { transform: translateY(1px); }
-.btn-primary { background: var(--brand); color: var(--brand-ink); }
+.btn-primary { background: var(--brand); color: var(--on-brand); }
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-primary[disabled] { opacity: .35; cursor: not-allowed; }
 .btn-quiet { background: none; border-color: var(--line); color: var(--ink-2); }
@@ -245,7 +255,7 @@ button { font: inherit; color: inherit; }
 .results { animation: question-in .4s cubic-bezier(.2,.8,.3,1) both; padding-top: 2rem; }
 
 .verdict { max-width: 24ch; font-size: clamp(1.9rem, 1.3rem + 2.8vw, 3.1rem); line-height: 1.08; }
-.verdict em { font-style: normal; color: var(--brand); }
+.verdict em { font-style: normal; color: var(--brand-text); }
 .verdict-sub { color: var(--ink-2); margin-top: 1rem; max-width: 52ch; font-size: 1rem; }
 
 /* Headline figures, laid out like a meter panel. */
@@ -258,7 +268,7 @@ button { font: inherit; color: inherit; }
 .figure { background: var(--surface); padding: 1.1rem 1.15rem 1.2rem; display: flex; flex-direction: column; gap: .35rem; }
 .figure-label { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
 .figure-value { font-family: var(--mono); font-size: clamp(1.35rem, 1.1rem + 1vw, 1.85rem); font-variant-numeric: tabular-nums; letter-spacing: -.02em; line-height: 1.1; }
-.figure-value.is-gain { color: var(--brand); }
+.figure-value.is-gain { color: var(--brand-text); }
 .figure-value.is-flag { color: var(--flag); }
 .figure-note { font-size: .76rem; color: var(--ink-3); line-height: 1.4; }
 
@@ -294,14 +304,14 @@ button { font: inherit; color: inherit; }
 .card p { font-size: .88rem; color: var(--ink-2); }
 .card-figure { font-family: var(--mono); font-size: 1.5rem; font-variant-numeric: tabular-nums; margin: .5rem 0 .3rem; letter-spacing: -.02em; }
 .card.is-good { border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
-.card.is-good .card-figure { color: var(--brand); }
+.card.is-good .card-figure { color: var(--brand-text); }
 
 .pill {
   display: inline-block; font-family: var(--mono); font-size: .66rem;
   letter-spacing: .1em; text-transform: uppercase; padding: .2rem .5rem;
   border-radius: 3px; background: var(--surface-2); color: var(--ink-2);
 }
-.pill.is-good { background: var(--brand-wash); color: var(--brand); }
+.pill.is-good { background: var(--brand-wash); color: var(--brand-text); }
 .pill.is-warn { background: var(--flag-wash); color: var(--flag); }
 
 /* Assumptions — collapsed, but present. Credibility comes from showing your working. */
@@ -373,16 +383,27 @@ window.SOLAR_CONFIG = {
     logoUrlDark: "",                    // A white/reversed logo for dark mode, if they have one.
 
     // Shown on the results page as the reason to trust the quote.
-    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Electrical \u2014 the region's electrical specialists since 1993."
+    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Plumbing & Electrical \u2014 the region's electrical specialists for over 30 years.",
+
+    // Is this installer SEANZ-accredited? ANZ and Kiwibank both require it
+    // for their green loans, so this flips the finance card from a caveat
+    // ("they require an accredited installer") into a selling point
+    // ("we're accredited, so you're covered").
+    // Solar Colab display the SEANZ member mark on their site.
+    seanzAccredited: true
   },
 
-  /* --- Their brand colour. Two values, used everywhere. --- */
+  /* --- Their brand colour. -----------------------------------------------
+     Solar Colab run golden yellow on warm charcoal and cream. Yellow is a
+     FILL colour, not a text colour — yellow text on a pale background is
+     unreadable — so the page darkens it automatically wherever it needs to
+     be read as text. You only set the fill.
+     >>> Eyeballed off a screenshot of their site. If they have a brand
+         guide with exact hex codes, drop them in here. <<<                */
   brand: {
-    // >>> PROVISIONAL. Tim: send me Solar Colab's real hex codes (or just a
-    // screenshot of their site) and this becomes a 30-second fix. Their site
-    // and CDN are blocked from where I'm running, so I couldn't read them. <<<
-    accent:     "#17734A",  // on light backgrounds
-    accentDark: "#3FB37A"   // on dark backgrounds - needs to stay readable
+    accent:     "#F4A81C",  // the fill: buttons, progress bar, chart, highlights
+    accentDark: "#FDB833",  // slightly brighter, for dark mode
+    onAccent:   "#2B2B2B"   // text sitting ON the yellow. Their site uses near-black.
   },
 
   /* --- Region --- */
@@ -848,16 +869,70 @@ window.SolarCalc = (function () {
   const years = n => (n >= 25 || n == null) ? "25+ years" :
                      (n < 10 ? n.toFixed(1) : Math.round(n)) + " years";
 
-  /* --- Brand: paint the client's colour over the design tokens ------------- */
+  /* --- Brand ---------------------------------------------------------------
+     A client's brand colour is a FILL. Some fills — yellow especially — are
+     unreadable as text on a pale background. So we darken (or lighten) the
+     brand colour until it passes contrast against the page, and use that
+     wherever the colour has to be read rather than looked at.
+     This is what lets the whole thing re-skin from one hex value.
+  ------------------------------------------------------------------------- */
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    const f = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+    return [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16));
+  }
+  function luminance(rgb) {
+    const a = rgb.map(v => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrast(a, b) {
+    const l1 = luminance(a), l2 = luminance(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  const toHex = rgb => "#" + rgb.map(v =>
+    Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
+
+  /* Step the colour toward black or white until it reads against `bg`. */
+  function readableOn(brandHex, bgHex, target) {
+    const bg = hexToRgb(bgHex);
+    let rgb = hexToRgb(brandHex);
+    if (contrast(rgb, bg) >= target) return toHex(rgb);
+    const towardBlack = luminance(bg) > 0.5;
+    for (let i = 0; i < 24; i++) {
+      rgb = rgb.map(v => towardBlack ? v * 0.9 : v + (255 - v) * 0.12);
+      if (contrast(rgb, bg) >= target) break;
+    }
+    return toHex(rgb);
+  }
+
+  /* rgba() from a hex, for the tinted washes behind selected options. */
+  const wash = (hex, alpha) => {
+    const [r, g, b] = hexToRgb(hex);
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+  };
+
   function applyBrand() {
+    const b = CFG.brand;
+    const onBrand = b.onAccent || "#FFFFFF";
+
+    // Paper colours come from the stylesheet; keep these two in step with it.
+    const lightPaper = "#F5F3EF", darkPaper = "#1F1E1C";
+
+    const vars = light =>
+      "--brand:" + (light ? b.accent : b.accentDark) + ";" +
+      "--brand-text:" + readableOn(light ? b.accent : b.accentDark,
+                                   light ? lightPaper : darkPaper, 4.5) + ";" +
+      "--on-brand:" + onBrand + ";" +
+      "--brand-wash:" + wash(light ? b.accent : b.accentDark, light ? 0.16 : 0.20) + ";";
+
     const s = document.createElement("style");
     s.textContent =
-      ":root{--brand:" + CFG.brand.accent + ";--brand-wash:" +
-        CFG.brand.accent + "1A;}" +
-      "@media (prefers-color-scheme: dark){:root:not([data-theme='light']){--brand:" +
-        CFG.brand.accentDark + ";--brand-wash:" + CFG.brand.accentDark + "26;}}" +
-      ":root[data-theme='dark']{--brand:" + CFG.brand.accentDark +
-        ";--brand-wash:" + CFG.brand.accentDark + "26;}";
+      ":root{" + vars(true) + "}" +
+      "@media (prefers-color-scheme: dark){:root:not([data-theme='light']){" + vars(false) + "}}" +
+      ":root[data-theme='dark']{" + vars(false) + "}";
     document.head.appendChild(s);
   }
 
@@ -1474,7 +1549,7 @@ window.SolarCalc = (function () {
           ? " more than covers that repayment from day one."
           : " covers most of it, so you're out of pocket about " +
             money(f.monthly - r.annualSaving / 12) + " a month until it's paid off.") +
-        (f.seanz ? " " + f.bank + " require a SEANZ-accredited installer." : "")));
+        seanzLine(f)));
     } else if (f.eligible && f.kind === "cashback") {
       fin.className = "card is-good";
       fin.appendChild(pill("You likely qualify", "is-good"));
@@ -1482,7 +1557,7 @@ window.SolarCalc = (function () {
       fin.appendChild(el("div", "card-figure mono", money(f.cashback)));
       fin.appendChild(el("p", null,
         f.bank + " give a " + money(f.cashback) + " cashback on solar rather than a discounted rate, so you'd be paying standard rates on the balance." +
-        (f.seanz ? " They require a SEANZ-accredited installer." : "")));
+        seanzLine(f)));
     } else {
       fin.appendChild(pill("No green loan", "is-warn"));
       fin.appendChild(el("h4", null, "How you'd pay for it"));
@@ -1518,6 +1593,17 @@ window.SolarCalc = (function () {
 
     s.appendChild(cards);
     return s;
+  }
+
+  /* ANZ and Kiwibank only lend against a SEANZ-accredited installer. If this
+     client is accredited that's worth saying out loud; if they aren't, the
+     homeowner needs the warning. */
+  function seanzLine(f) {
+    if (!f.seanz) return "";
+    return CFG.client.seanzAccredited
+      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer — " +
+        CFG.client.name + " are accredited, so that box is already ticked."
+      : " " + f.bank + " require a SEANZ-accredited installer, so check that first.";
   }
 
   function pill(text, cls) {

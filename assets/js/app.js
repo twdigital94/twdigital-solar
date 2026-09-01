@@ -26,16 +26,70 @@
   const years = n => (n >= 25 || n == null) ? "25+ years" :
                      (n < 10 ? n.toFixed(1) : Math.round(n)) + " years";
 
-  /* --- Brand: paint the client's colour over the design tokens ------------- */
+  /* --- Brand ---------------------------------------------------------------
+     A client's brand colour is a FILL. Some fills — yellow especially — are
+     unreadable as text on a pale background. So we darken (or lighten) the
+     brand colour until it passes contrast against the page, and use that
+     wherever the colour has to be read rather than looked at.
+     This is what lets the whole thing re-skin from one hex value.
+  ------------------------------------------------------------------------- */
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    const f = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+    return [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16));
+  }
+  function luminance(rgb) {
+    const a = rgb.map(v => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrast(a, b) {
+    const l1 = luminance(a), l2 = luminance(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  const toHex = rgb => "#" + rgb.map(v =>
+    Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
+
+  /* Step the colour toward black or white until it reads against `bg`. */
+  function readableOn(brandHex, bgHex, target) {
+    const bg = hexToRgb(bgHex);
+    let rgb = hexToRgb(brandHex);
+    if (contrast(rgb, bg) >= target) return toHex(rgb);
+    const towardBlack = luminance(bg) > 0.5;
+    for (let i = 0; i < 24; i++) {
+      rgb = rgb.map(v => towardBlack ? v * 0.9 : v + (255 - v) * 0.12);
+      if (contrast(rgb, bg) >= target) break;
+    }
+    return toHex(rgb);
+  }
+
+  /* rgba() from a hex, for the tinted washes behind selected options. */
+  const wash = (hex, alpha) => {
+    const [r, g, b] = hexToRgb(hex);
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+  };
+
   function applyBrand() {
+    const b = CFG.brand;
+    const onBrand = b.onAccent || "#FFFFFF";
+
+    // Paper colours come from the stylesheet; keep these two in step with it.
+    const lightPaper = "#F5F3EF", darkPaper = "#1F1E1C";
+
+    const vars = light =>
+      "--brand:" + (light ? b.accent : b.accentDark) + ";" +
+      "--brand-text:" + readableOn(light ? b.accent : b.accentDark,
+                                   light ? lightPaper : darkPaper, 4.5) + ";" +
+      "--on-brand:" + onBrand + ";" +
+      "--brand-wash:" + wash(light ? b.accent : b.accentDark, light ? 0.16 : 0.20) + ";";
+
     const s = document.createElement("style");
     s.textContent =
-      ":root{--brand:" + CFG.brand.accent + ";--brand-wash:" +
-        CFG.brand.accent + "1A;}" +
-      "@media (prefers-color-scheme: dark){:root:not([data-theme='light']){--brand:" +
-        CFG.brand.accentDark + ";--brand-wash:" + CFG.brand.accentDark + "26;}}" +
-      ":root[data-theme='dark']{--brand:" + CFG.brand.accentDark +
-        ";--brand-wash:" + CFG.brand.accentDark + "26;}";
+      ":root{" + vars(true) + "}" +
+      "@media (prefers-color-scheme: dark){:root:not([data-theme='light']){" + vars(false) + "}}" +
+      ":root[data-theme='dark']{" + vars(false) + "}";
     document.head.appendChild(s);
   }
 
@@ -652,7 +706,7 @@
           ? " more than covers that repayment from day one."
           : " covers most of it, so you're out of pocket about " +
             money(f.monthly - r.annualSaving / 12) + " a month until it's paid off.") +
-        (f.seanz ? " " + f.bank + " require a SEANZ-accredited installer." : "")));
+        seanzLine(f)));
     } else if (f.eligible && f.kind === "cashback") {
       fin.className = "card is-good";
       fin.appendChild(pill("You likely qualify", "is-good"));
@@ -660,7 +714,7 @@
       fin.appendChild(el("div", "card-figure mono", money(f.cashback)));
       fin.appendChild(el("p", null,
         f.bank + " give a " + money(f.cashback) + " cashback on solar rather than a discounted rate, so you'd be paying standard rates on the balance." +
-        (f.seanz ? " They require a SEANZ-accredited installer." : "")));
+        seanzLine(f)));
     } else {
       fin.appendChild(pill("No green loan", "is-warn"));
       fin.appendChild(el("h4", null, "How you'd pay for it"));
@@ -696,6 +750,17 @@
 
     s.appendChild(cards);
     return s;
+  }
+
+  /* ANZ and Kiwibank only lend against a SEANZ-accredited installer. If this
+     client is accredited that's worth saying out loud; if they aren't, the
+     homeowner needs the warning. */
+  function seanzLine(f) {
+    if (!f.seanz) return "";
+    return CFG.client.seanzAccredited
+      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer — " +
+        CFG.client.name + " are accredited, so that box is already ticked."
+      : " " + f.bank + " require a SEANZ-accredited installer, so check that first.";
   }
 
   function pill(text, cls) {

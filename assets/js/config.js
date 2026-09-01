@@ -20,16 +20,27 @@ window.SOLAR_CONFIG = {
     logoUrlDark: "",                    // A white/reversed logo for dark mode, if they have one.
 
     // Shown on the results page as the reason to trust the quote.
-    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Electrical \u2014 the region's electrical specialists since 1993."
+    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Plumbing & Electrical \u2014 the region's electrical specialists for over 30 years.",
+
+    // Is this installer SEANZ-accredited? ANZ and Kiwibank both require it
+    // for their green loans, so this flips the finance card from a caveat
+    // ("they require an accredited installer") into a selling point
+    // ("we're accredited, so you're covered").
+    // Solar Colab display the SEANZ member mark on their site.
+    seanzAccredited: true
   },
 
-  /* --- Their brand colour. Two values, used everywhere. --- */
+  /* --- Their brand colour. -----------------------------------------------
+     Solar Colab run golden yellow on warm charcoal and cream. Yellow is a
+     FILL colour, not a text colour — yellow text on a pale background is
+     unreadable — so the page darkens it automatically wherever it needs to
+     be read as text. You only set the fill.
+     >>> Eyeballed off a screenshot of their site. If they have a brand
+         guide with exact hex codes, drop them in here. <<<                */
   brand: {
-    // >>> PROVISIONAL. Tim: send me Solar Colab's real hex codes (or just a
-    // screenshot of their site) and this becomes a 30-second fix. Their site
-    // and CDN are blocked from where I'm running, so I couldn't read them. <<<
-    accent:     "#17734A",  // on light backgrounds
-    accentDark: "#3FB37A"   // on dark backgrounds - needs to stay readable
+    accent:     "#F4A81C",  // the fill: buttons, progress bar, chart, highlights
+    accentDark: "#FDB833",  // slightly brighter, for dark mode
+    onAccent:   "#2B2B2B"   // text sitting ON the yellow. Their site uses near-black.
   },
 
   /* --- Region --- */
