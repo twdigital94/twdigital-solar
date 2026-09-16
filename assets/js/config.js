@@ -43,6 +43,27 @@ window.SOLAR_CONFIG = {
     onAccent:   "#2B2B2B"   // text sitting ON the yellow. Their site uses near-black.
   },
 
+  /* --- Their fonts. ---------------------------------------------------------
+     Any font on Google Fonts (fonts.google.com) works — just type the family
+     name exactly as it appears there. The page builds the load URL itself.
+
+     Three roles:
+       display — the big headings and the question text
+       body    — everything else, including subheadings at the bold weight
+       mono    — every number. Leave this alone unless you've a good reason;
+                 a monospaced face is what makes the figures read like a
+                 meter reading rather than marketing.
+
+     If a client uses a licensed font that ISN'T on Google Fonts, put the
+     stylesheet URL their foundry gives you in customCssUrl and name the
+     family above. See README for how to handle a font supplied as files.  */
+  fonts: {
+    display: { family: "Baloo 2",       weights: [500, 600, 700] },
+    body:    { family: "Inter",         weights: [400, 600, 700] },
+    mono:    { family: "IBM Plex Mono", weights: [400, 500] },
+    customCssUrl: ""
+  },
+
   /* --- Region --- */
   region: {
     default: "hawkes-bay",

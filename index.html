@@ -5,9 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solar Savings Calculator</title>
 <meta name="description" content="See what solar would save on your power bill — system size, install cost, annual savings and payback, worked out on real New Zealand figures.">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Poppins:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap">
+
+<!-- Config first, so the fonts named in it can start loading immediately. -->
+<script src="assets/js/config.js"></script>
+<script>
+/* Turns the fonts block in config.js into a real Google Fonts request, and
+   points the stylesheet's type variables at the chosen families. Kept inline
+   and in the head so the fonts start downloading before anything renders. */
+(function () {
+  var f = (window.SOLAR_CONFIG || {}).fonts;
+  if (!f) return;
+  var roles = ["display", "body", "mono"];
+  var families = [];
+
+  roles.forEach(function (role) {
+    var spec = f[role];
+    if (!spec || !spec.family) return;
+    var weights = (spec.weights && spec.weights.length) ? spec.weights : [400];
+    families.push("family=" + spec.family.replace(/ /g, "+") +
+                  ":wght@" + weights.join(";"));
+  });
+
+  if (families.length) {
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?" + families.join("&") + "&display=swap";
+    document.head.appendChild(link);
+  }
+
+  // A font the client licenses from somewhere other than Google Fonts.
+  if (f.customCssUrl) {
+    var custom = document.createElement("link");
+    custom.rel = "stylesheet";
+    custom.href = f.customCssUrl;
+    document.head.appendChild(custom);
+  }
+
+  // Always keep a real fallback stack behind each family.
+  var stacks = {
+    display: '"Helvetica Neue", Arial, sans-serif',
+    body:    '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    mono:    'ui-monospace, SFMono-Regular, Menlo, monospace'
+  };
+  // Set these inline on <html>. A <style> injected here would sit ahead of
+  // styles.css in the cascade and lose to its defaults.
+  roles.forEach(function (role) {
+    var spec = f[role];
+    if (!spec || !spec.family) return;
+    document.documentElement.style.setProperty(
+      "--" + role, '"' + spec.family + '",' + stacks[role]);
+  });
+})();
+</script>
+
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -32,7 +85,6 @@
   <div id="results" hidden></div>
 </div>
 
-<script src="assets/js/config.js"></script>
 <script src="assets/js/nz-data.js"></script>
 <script src="assets/js/calculator.js"></script>
 <script src="assets/js/app.js"></script>

@@ -34,9 +34,11 @@
 
   --shadow: 0 1px 2px rgba(43,43,43,.05), 0 8px 24px -12px rgba(43,43,43,.20);
 
-  --display: "Poppins", "Helvetica Neue", Arial, sans-serif;
-  --body:    "Work Sans", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
-  --mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Defaults. The font loader in index.html overrides these with
+     whatever is named in config.js. */
+  --display: "Helvetica Neue", Arial, sans-serif;
+  --body:    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono:    ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --step:  clamp(1rem, .8rem + .6vw, 1.25rem);
   --gutter: clamp(1.25rem, .9rem + 1.6vw, 2.5rem);
@@ -95,7 +97,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.015em; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h3, h4 { font-family: var(--body); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.005em; }
 p { margin: 0; }
 button { font: inherit; color: inherit; }
 
@@ -120,7 +123,7 @@ button { font: inherit; color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: .7rem; min-width: 0; }
 .brand img { height: 34px; width: auto; display: block; }
-.brand-name { font-family: var(--display); font-weight: 600; font-size: 1.05rem; letter-spacing: -.01em; }
+.brand-name { font-family: var(--display); font-weight: 600; font-size: 1.1rem; letter-spacing: -.01em; }
 .brand-tag { color: var(--ink-3); font-size: .8rem; }
 .masthead-phone {
   font-family: var(--mono); font-size: .82rem; color: var(--ink-2);
@@ -289,7 +292,7 @@ button { font: inherit; color: inherit; }
 .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.4rem; }
 @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.35rem; }
-.card h4 { font-family: var(--display); font-size: 1rem; font-weight: 600; margin: .45rem 0 .5rem; }
+.card h4 { font-size: 1rem; font-weight: 600; margin: .45rem 0 .5rem; }
 .card p { font-size: .88rem; color: var(--ink-2); }
 .card-figure { font-family: var(--mono); font-size: 1.5rem; font-variant-numeric: tabular-nums; margin: .5rem 0 .3rem; letter-spacing: -.02em; }
 .card.is-good { border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }

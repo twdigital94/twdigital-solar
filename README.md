@@ -14,8 +14,8 @@ Built to be re-skinned per client: **one config file, no code changes.**
 
 1. **Copy this folder** and rename it for the client.
 2. **Open `assets/js/config.js`** and change the values at the top: their name,
-   phone, logo URL, brand colour, and their GoHighLevel webhook. That file is
-   commented line by line — it's the only file you need to touch.
+   phone, logo URL, brand colour, fonts, and their GoHighLevel webhook. That
+   file is commented line by line — it's the only file you need to touch.
 3. **Deploy to Netlify.** Drag the folder onto <https://app.netlify.com/drop>.
    That's the entire deploy. You get a URL like `client-solar.netlify.app`.
 4. **Embed it in their GoHighLevel page** — see below.
@@ -46,6 +46,53 @@ every time you change something. The iframe is the better default.
 
 ---
 
+## Using a client's fonts
+
+Fonts are set in `config.js` alongside the colours:
+
+```js
+fonts: {
+  display: { family: "Baloo 2",       weights: [500, 600, 700] },
+  body:    { family: "Inter",         weights: [400, 600, 700] },
+  mono:    { family: "IBM Plex Mono", weights: [400, 500] },
+  customCssUrl: ""
+}
+```
+
+**If the font is on Google Fonts** (fonts.google.com), just type the family
+name exactly as it appears there. The page builds the load request itself —
+nothing to download, nothing else to change. Most brand fonts you'll meet in
+NZ small business are on there.
+
+The three roles:
+
+- **display** — the big headings and the question text.
+- **body** — everything else. Subheadings use this family at weight 600, so a
+  chunky display face like Baloo 2 never has to work at small sizes where it
+  gets shouty.
+- **mono** — every figure. Worth leaving alone: a monospaced face is what makes
+  the numbers read like a meter rather than marketing, and it keeps columns of
+  digits lined up.
+
+**If the font isn't on Google Fonts**, you have two options:
+
+1. *The foundry gives you a hosted stylesheet URL* (Adobe Fonts, Typekit,
+   Fontshare, a client's own CDN). Put it in `customCssUrl` and name the family
+   in the role above. Done.
+2. *You've been sent the font as files* (`.woff2`, `.otf`, `.ttf`). Drop them in
+   `assets/fonts/`, then add an `@font-face` block at the top of `styles.css`
+   pointing at them. Send the files over and this is a two-minute job — but
+   check the licence first. A desktop licence covers a designer's laptop, not
+   putting the font on a public web page; that needs a webfont licence, and
+   using one without it is the client's legal problem, not yours.
+
+**A warning worth heeding:** every extra font and weight is another file the
+page waits on. Three families at two or three weights each is already a lot.
+If a client's brand guide lists six weights, pick the two or three that earn
+their place.
+
+---
+
 ## Where the leads go
 
 Set `leads.webhookUrl` in `config.js` to the installer's GoHighLevel **Inbound
@@ -65,7 +112,7 @@ the payload to the browser console instead.
 
 | File | What it is |
 |---|---|
-| `assets/js/config.js` | **The only file you edit per client.** Branding, contact details, webhook, tracking, and every calculation assumption. |
+| `assets/js/config.js` | **The only file you edit per client.** Branding, fonts, contact details, webhook, tracking, and every calculation assumption. |
 | `assets/js/nz-data.js` | Shared NZ data: regional solar yield, install pricing, bank green loans, consent rules. Edit when the country changes, not when the client does. |
 | `assets/js/calculator.js` | The maths. Pure calculation, no page code. |
 | `assets/js/app.js` | The question flow and the results page. |
@@ -120,6 +167,6 @@ These were deliberate, and are worth not breaking:
   table. Every savings number depends on them.
 - **Confirm the self-consumption assumptions** (`daytimeUsageShare` in
   `config.js`) with an installer.
-- Solar Colab's brand colours are provisional — their site was unreachable from
-  the build environment.
+- Solar Colab's brand colours are eyeballed from a screenshot of their site.
+  If they have a brand guide with exact hex codes, those should replace them.
 - No battery option yet. Worth adding once v1 is proven.
