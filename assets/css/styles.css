@@ -1,5 +1,5 @@
 /* ============================================================================
-   NZ Solar Savings Calculator — styles
+   NZ Solar Savings Calculator. Styles.
    Design: instrument panel. Cool paper, slate ink, one brand colour doing all
    the emphasis, and a fixed ochre used only for cautions. Every number is set
    in mono so figures read like a meter rather than marketing.
@@ -242,7 +242,7 @@ button { font: inherit; color: inherit; }
 .exit p { color: var(--ink-2); margin-top: .8rem; }
 
 /* ==========================================================================
-   RESULTS — breaks the two-column grid and runs full width.
+   RESULTS. Breaks the two-column grid and runs full width.
    ========================================================================== */
 .results { animation: question-in .4s cubic-bezier(.2,.8,.3,1) both; padding-top: 2rem; }
 
@@ -306,7 +306,7 @@ button { font: inherit; color: inherit; }
 .pill.is-good { background: var(--brand-wash); color: var(--brand-text); }
 .pill.is-warn { background: var(--flag-wash); color: var(--flag); }
 
-/* Assumptions — collapsed, but present. Credibility comes from showing your working. */
+/* Assumptions, collapsed but present. Credibility comes from showing your working. */
 .assumptions { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
 .assumptions summary { cursor: pointer; font-size: .88rem; color: var(--ink-2); }
 .assumptions summary:hover { color: var(--ink); }

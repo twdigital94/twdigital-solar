@@ -1,6 +1,6 @@
 /* ============================================================================
    THE PAGE. Runs the question flow, then draws the results.
-   Reads everything it needs from config.js — no client details live in here.
+   Reads everything it needs from config.js. No client details live in here.
    ============================================================================ */
 
 (function () {
@@ -27,7 +27,7 @@
                      (n < 10 ? n.toFixed(1) : Math.round(n)) + " years";
 
   /* --- Brand ---------------------------------------------------------------
-     A client's brand colour is a FILL. Some fills — yellow especially — are
+     A client's brand colour is a FILL. Some fills, yellow especially, are
      unreadable as text on a pale background. So we darken (or lighten) the
      brand colour until it passes contrast against the page, and use that
      wherever the colour has to be read rather than looked at.
@@ -130,7 +130,7 @@
     {
       id: "monthlyBill",
       question: "What's your power bill in a normal month?",
-      why: "This is the single most important number. Everything else — system size, savings, payback — is worked back from it.",
+      why: "This is the single most important number. Everything else (system size, savings, payback) is worked back from it.",
       railLabel: "Power bill",
       railValue: v => money(v) + "/month",
       render: renderBill
@@ -160,7 +160,7 @@
     {
       id: "ownership",
       question: "Do you own the home?",
-      why: "It decides what finance you can get — and whether solar is your call to make at all.",
+      why: "It decides what finance you can get, and whether solar is your call to make at all.",
       railLabel: "Ownership",
       railValue: v => ({ mortgage: "Own, with mortgage", outright: "Own outright", renting: "Renting" })[v],
       render: s => renderOptions(s, [
@@ -215,7 +215,7 @@
     {
       id: "contact",
       question: "Where should we send it?",
-      why: "Your results are on the next screen either way — this is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
+      why: "Your results are on the next screen either way. This is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
       render: renderContact
     }
   ];
@@ -232,7 +232,7 @@
 
     if (!recorded.length) {
       const li = el("li", "rail-empty",
-        "Seven questions. No address, no roof scan, no phone call — a real estimate at the end of it.");
+        "Seven questions. No address, no roof scan, no phone call. A real estimate at the end of it.");
       rail.appendChild(li);
       return;
     }
@@ -268,7 +268,7 @@
   }
 
   function advance() {
-    // Renting is a graceful dead end — they can't authorise an install.
+    // Renting is a graceful dead end: they can't authorise an install.
     if (answers.ownership === "renting") return renderRenterExit();
     const steps = liveSteps();
     if (stepIndex < steps.length - 1) { stepIndex++; render(); }
@@ -431,7 +431,7 @@
       const missing = fields.find(f => f.required && !data[f.name]);
       if (missing) return showError(err, "We need your " + missing.label.toLowerCase() + " to send this through.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email))
-        return showError(err, "That email doesn't look right — mind checking it?");
+        return showError(err, "That email doesn't look right. Mind checking it?");
 
       err.hidden = true;
       answers.contact = data;
@@ -442,7 +442,7 @@
 
     q.appendChild(form);
     const note = el("p", "form-note",
-      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof — no obligation, and no third parties.");
+      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof. No obligation, and no third parties.");
     q.appendChild(note);
   }
 
@@ -453,7 +453,7 @@
   }
 
   /* ==========================================================================
-     SUBMIT — push the lead, fire the tracking, then show the results.
+     SUBMIT. Push the lead, fire the tracking, then show the results.
      The results show whether or not the webhook succeeds. Never punish the
      homeowner for our plumbing failing.
      ========================================================================== */
@@ -531,7 +531,7 @@
       verdict.innerHTML = name + ", solar could take <em>" + pct(r.billOffset) +
         "</em> off your power bill.";
     } else {
-      verdict.innerHTML = name + ", solar would work here — but it's a <em>long</em> payback.";
+      verdict.innerHTML = name + ", solar would work here, but it's a <em>long</em> payback.";
     }
     out.appendChild(verdict);
 
@@ -570,7 +570,7 @@
 
     const d = el("p", "disclaimer");
     d.textContent = "These are estimates, not a quote. They're built from your power bill, " +
-      "regional sunshine figures and 2026 New Zealand install pricing — but every roof is different. " +
+      "regional sunshine figures and 2026 New Zealand install pricing, but every roof is different. " +
       CFG.client.name + " will confirm the numbers on site before you commit to anything.";
     out.appendChild(d);
 
@@ -584,7 +584,7 @@
     const s = el("section", "section");
     s.appendChild(el("h3", null, "What happens to your bill"));
     s.appendChild(el("p", "section-lede",
-      "Doing nothing isn't holding steady — New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
+      "Doing nothing isn't holding steady. New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
 
     const max = Math.max(r.monthlyBillIn10IfNothing, r.monthlyBillBefore, r.monthlyBillAfter);
     const bars = el("div", "bars");
@@ -614,7 +614,7 @@
     s.appendChild(el("h3", null, "The next 25 years"));
     s.appendChild(el("p", "section-lede",
       "Total savings against what you paid. Where the line crosses zero, the system has paid for itself. The dip at year " +
-      CFG.assumptions.inverterReplacement.year + " is a replacement inverter — we count it rather than pretend it away."));
+      CFG.assumptions.inverterReplacement.year + " is a replacement inverter, which we count rather than pretend away."));
 
     const W = 720, H = 280, PAD_L = 62, PAD_R = 16, PAD_T = 18, PAD_B = 34;
     const cost = r.cost.mid;
@@ -735,7 +735,7 @@
         c.limitM2 + "m², the property is in a standard wind zone, and the panels sit flush or on standard frames. " +
         "Yours is " + Math.round(c.areaM2) + "m². That saves roughly " +
         moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
-        " and several weeks — " + CFG.client.name + " will confirm your wind zone."));
+        " and several weeks. " + CFG.client.name + " will confirm your wind zone."));
     } else {
       con.appendChild(pill("Consent likely", "is-warn"));
       con.appendChild(el("h4", null, "This one probably needs consent"));
@@ -744,7 +744,7 @@
         "The October 2025 exemption covers installs under " + c.limitM2 +
         "m² of panels. At " + Math.round(c.areaM2) + "m² yours is over that, so budget another " +
         moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
-        " and a few extra weeks. A slightly smaller system may duck under the line — worth asking about."));
+        " and a few extra weeks. A slightly smaller system may duck under the line, so it's worth asking about."));
     }
     cards.appendChild(con);
 
@@ -758,7 +758,7 @@
   function seanzLine(f) {
     if (!f.seanz) return "";
     return CFG.client.seanzAccredited
-      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer — " +
+      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer. " +
         CFG.client.name + " are accredited, so that box is already ticked."
       : " " + f.bank + " require a SEANZ-accredited installer, so check that first.";
   }
@@ -770,7 +770,7 @@
   /* Show the working. Costs nothing and answers the sceptics. */
   function assumptionsSection(r) {
     const d = el("details", "assumptions");
-    const sum = el("summary", null, "The numbers behind this — every assumption we used");
+    const sum = el("summary", null, "The numbers behind this: every assumption we used");
     d.appendChild(sum);
     const a = CFG.assumptions;
     const rows = [

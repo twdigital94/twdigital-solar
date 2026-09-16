@@ -1,5 +1,5 @@
 /* ============================================================================
-   CONFIG — THIS IS THE ONLY FILE YOU EDIT FOR A NEW CLIENT.
+   CONFIG. THIS IS THE ONLY FILE YOU EDIT FOR A NEW CLIENT.
    Copy the whole project folder, change the values below, deploy. Done.
    Everything else (the NZ data, the maths, the design) is shared.
    ============================================================================ */
@@ -20,7 +20,7 @@ window.SOLAR_CONFIG = {
     logoUrlDark: "",                    // A white/reversed logo for dark mode, if they have one.
 
     // Shown on the results page as the reason to trust the quote.
-    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Plumbing & Electrical \u2014 the region's electrical specialists for over 30 years.",
+    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Plumbing & Electrical, the region's electrical specialists for over 30 years.",
 
     // Is this installer SEANZ-accredited? ANZ and Kiwibank both require it
     // for their green loans, so this flips the finance card from a caveat
@@ -32,8 +32,8 @@ window.SOLAR_CONFIG = {
 
   /* --- Their brand colour. -----------------------------------------------
      Solar Colab run golden yellow on warm charcoal and cream. Yellow is a
-     FILL colour, not a text colour — yellow text on a pale background is
-     unreadable — so the page darkens it automatically wherever it needs to
+     FILL colour, not a text colour. Yellow text on a pale background is
+     unreadable, so the page darkens it automatically wherever it needs to
      be read as text. You only set the fill.
      >>> Eyeballed off a screenshot of their site. If they have a brand
          guide with exact hex codes, drop them in here. <<<                */
@@ -44,13 +44,13 @@ window.SOLAR_CONFIG = {
   },
 
   /* --- Their fonts. ---------------------------------------------------------
-     Any font on Google Fonts (fonts.google.com) works — just type the family
+     Any font on Google Fonts (fonts.google.com) works. Just type the family
      name exactly as it appears there. The page builds the load URL itself.
 
      Three roles:
-       display — the big headings and the question text
-       body    — everything else, including subheadings at the bold weight
-       mono    — every number. Leave this alone unless you've a good reason;
+       display: the big headings and the question text
+       body:    everything else, including subheadings at the bold weight
+       mono:    every number. Leave this alone unless you've a good reason;
                  a monospaced face is what makes the figures read like a
                  meter reading rather than marketing.
 
@@ -78,7 +78,7 @@ window.SOLAR_CONFIG = {
   leads: {
     // Paste the installer's GoHighLevel *Inbound Webhook* URL here.
     // GHL: Automation > Workflows > new workflow > trigger "Inbound Webhook" > copy URL.
-    // Leave blank while testing — the form will still work and log to the browser console.
+    // Leave blank while testing. The form will still work and log to the browser console.
     webhookUrl: "",
     requirePhone: true
   },
@@ -95,7 +95,7 @@ window.SOLAR_CONFIG = {
   pricingOverride: null,
 
   /* ==========================================================================
-     ASSUMPTIONS — the numbers behind every figure the homeowner sees.
+     ASSUMPTIONS. The numbers behind every figure the homeowner sees.
      These are the ones worth arguing about. Change a number here and every
      result on the page changes with it.
      ========================================================================== */
@@ -120,7 +120,7 @@ window.SOLAR_CONFIG = {
     panelWatts:   440,
     panelAreaM2:  1.95,
 
-    // SELF-CONSUMPTION — the most important assumption in the whole tool.
+    // SELF-CONSUMPTION. The most important assumption in the whole tool.
     // Power used in the house as it's generated is worth the full 27c buy
     // rate. Power exported is worth 17c. So payback moves on this more than
     // on anything else.
@@ -128,7 +128,7 @@ window.SOLAR_CONFIG = {
     // We DON'T size the system to cover their whole bill. A big power user
     // sized that way ends up with an oversized array exporting cheap power,
     // which makes payback worse, not better. Instead we size to what the
-    // house can actually absorb during daylight — which is how installers
+    // house can actually absorb during daylight, which is how installers
     // size in practice, and it lands us in the same place Solar Scout got
     // to on the same inputs.
     //
@@ -140,7 +140,7 @@ window.SOLAR_CONFIG = {
       out:   0.25    // out all day
     },
 
-    // Solar output and household demand never line up perfectly — the sun
+    // Solar output and household demand never line up perfectly. The sun
     // peaks at midday, the kettle doesn't. This discounts for that mismatch.
     solarLoadMatch: 0.85,
 

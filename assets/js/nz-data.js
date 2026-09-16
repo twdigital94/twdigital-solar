@@ -1,5 +1,5 @@
 /* ============================================================================
-   NZ DATA — shared across every client. You shouldn't need to touch this
+   NZ DATA. Shared across every client. You shouldn't need to touch this
    unless NZ rules or prices change. If a bank changes its green loan, this
    is the one place to fix it and every client gets the update.
    ============================================================================ */
@@ -7,7 +7,7 @@
 /* --- SOLAR YIELD BY REGION ---------------------------------------------------
    kWh generated per year, per kW of panels installed, on a good north roof.
 
-   >>> PLACEHOLDER DATA — TIM, REPLACE THIS WITH YOUR REAL TABLE. <<<
+   >>> PLACEHOLDER DATA. TIM, REPLACE THIS WITH YOUR REAL TABLE. <<<
    These are estimates in the right ballpark and in the order you gave me
    (Wellington top, then New Plymouth, Blenheim, Auckland), but the exact
    figures are guesses and every savings number on the page depends on them.
@@ -34,7 +34,7 @@ window.NZ_REGIONS = [
    Straight from your brief. If an installer gives you their own pricing,
    copy this shape into pricingOverride in config.js.
    Note: your 8kW and 10kW figures are identical ($15k–$18k). Left as given,
-   but worth a sanity check with an installer — I'd expect 10kW to be dearer.
+   but worth a sanity check with an installer, since I'd expect 10kW to be dearer.
 --------------------------------------------------------------------------- */
 window.NZ_SYSTEM_PRICING = [
   { kw: 3.0,  low:  8000, high: 10000 },
@@ -48,7 +48,7 @@ window.NZ_SYSTEM_PRICING = [
 /* --- BANK GREEN LOANS -----------------------------------------------------
    IMPORTANT: every one of these is a TOP-UP ON AN EXISTING MORTGAGE with
    that specific bank. Outright owners and renters do NOT qualify for any of
-   them. The tool must never imply otherwise — that's the fastest way to make
+   them. The tool must never imply otherwise, because that's the fastest way to make
    an installer look dishonest.
 --------------------------------------------------------------------------- */
 window.NZ_GREEN_LOANS = {

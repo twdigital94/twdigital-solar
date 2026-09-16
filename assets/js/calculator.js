@@ -12,7 +12,7 @@ window.SolarCalc = (function () {
 
   /* Work backwards from a power bill to how many units (kWh) they use a year.
      We take the fixed daily line charge off first, because that part of the
-     bill has nothing to do with how much power they use — and solar won't
+     bill has nothing to do with how much power they use, and solar won't
      touch it either. */
   function annualUsageKwh(monthlyBill) {
     const a = A();
@@ -28,7 +28,7 @@ window.SolarCalc = (function () {
     return region.yield * A().orientationFactor[orientation];
   }
 
-  /* How much of a year's power this household uses in daylight — the load
+  /* How much of a year's power this household uses in daylight: the load
      solar can actually serve without a battery. */
   function daytimeLoadKwh(usageKwh, occupancy) {
     return usageKwh * A().daytimeUsageShare[occupancy];
@@ -78,7 +78,7 @@ window.SolarCalc = (function () {
     const loan = window.NZ_GREEN_LOANS[answers.bank];
     if (!loan || loan.kind === "none") {
       return Object.assign({}, noLoan, {
-        reason: "Your bank doesn't currently offer a solar green loan. Worth asking them anyway — and most installers offer their own finance."
+        reason: "Your bank doesn't currently offer a solar green loan. Worth asking them anyway, and most installers offer their own finance."
       });
     }
 
@@ -139,7 +139,7 @@ window.SolarCalc = (function () {
       const exported = Math.max(degraded - selfUsed, 0);
 
       // Power they buy gets dearer each year, which makes the power they
-      // DON'T buy worth more. We hold the export rate flat — buyback rates
+      // DON'T buy worth more. We hold the export rate flat, because buyback rates
       // have not tracked retail prices, and assuming they would overstates
       // the case.
       const buyRate = a.buyRatePerKwh * Math.pow(1 + a.electricityInflation, y - 1);
@@ -186,7 +186,7 @@ window.SolarCalc = (function () {
     const proj    = project(generation, daytime, costMid);
 
     // The share of everything generated that gets used in the house rather
-    // than exported. Worth showing — it's what makes the numbers work.
+    // than exported. Worth showing, because it's what makes the numbers work.
     const scr = proj.years[0].selfUsed / proj.years[0].generation;
 
     const yearOne     = proj.years[0];

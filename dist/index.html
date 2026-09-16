@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solar Savings Calculator</title>
-<meta name="description" content="See what solar would save on your power bill — system size, install cost, annual savings and payback, worked out on real New Zealand figures.">
+<meta name="description" content="See what solar would save on your power bill: system size, install cost, annual savings and payback, worked out on real New Zealand figures.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
 <!-- Config first, so the fonts named in it can start loading immediately. -->
 <script>
 /* ============================================================================
-   CONFIG — THIS IS THE ONLY FILE YOU EDIT FOR A NEW CLIENT.
+   CONFIG. THIS IS THE ONLY FILE YOU EDIT FOR A NEW CLIENT.
    Copy the whole project folder, change the values below, deploy. Done.
    Everything else (the NZ data, the maths, the design) is shared.
    ============================================================================ */
@@ -33,7 +33,7 @@ window.SOLAR_CONFIG = {
     logoUrlDark: "",                    // A white/reversed logo for dark mode, if they have one.
 
     // Shown on the results page as the reason to trust the quote.
-    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Plumbing & Electrical \u2014 the region's electrical specialists for over 30 years.",
+    proofPoint: "200+ solar arrays installed across Hawke's Bay, fitted by Isaac's Plumbing & Electrical, the region's electrical specialists for over 30 years.",
 
     // Is this installer SEANZ-accredited? ANZ and Kiwibank both require it
     // for their green loans, so this flips the finance card from a caveat
@@ -45,8 +45,8 @@ window.SOLAR_CONFIG = {
 
   /* --- Their brand colour. -----------------------------------------------
      Solar Colab run golden yellow on warm charcoal and cream. Yellow is a
-     FILL colour, not a text colour — yellow text on a pale background is
-     unreadable — so the page darkens it automatically wherever it needs to
+     FILL colour, not a text colour. Yellow text on a pale background is
+     unreadable, so the page darkens it automatically wherever it needs to
      be read as text. You only set the fill.
      >>> Eyeballed off a screenshot of their site. If they have a brand
          guide with exact hex codes, drop them in here. <<<                */
@@ -57,13 +57,13 @@ window.SOLAR_CONFIG = {
   },
 
   /* --- Their fonts. ---------------------------------------------------------
-     Any font on Google Fonts (fonts.google.com) works — just type the family
+     Any font on Google Fonts (fonts.google.com) works. Just type the family
      name exactly as it appears there. The page builds the load URL itself.
 
      Three roles:
-       display — the big headings and the question text
-       body    — everything else, including subheadings at the bold weight
-       mono    — every number. Leave this alone unless you've a good reason;
+       display: the big headings and the question text
+       body:    everything else, including subheadings at the bold weight
+       mono:    every number. Leave this alone unless you've a good reason;
                  a monospaced face is what makes the figures read like a
                  meter reading rather than marketing.
 
@@ -91,7 +91,7 @@ window.SOLAR_CONFIG = {
   leads: {
     // Paste the installer's GoHighLevel *Inbound Webhook* URL here.
     // GHL: Automation > Workflows > new workflow > trigger "Inbound Webhook" > copy URL.
-    // Leave blank while testing — the form will still work and log to the browser console.
+    // Leave blank while testing. The form will still work and log to the browser console.
     webhookUrl: "",
     requirePhone: true
   },
@@ -108,7 +108,7 @@ window.SOLAR_CONFIG = {
   pricingOverride: null,
 
   /* ==========================================================================
-     ASSUMPTIONS — the numbers behind every figure the homeowner sees.
+     ASSUMPTIONS. The numbers behind every figure the homeowner sees.
      These are the ones worth arguing about. Change a number here and every
      result on the page changes with it.
      ========================================================================== */
@@ -133,7 +133,7 @@ window.SOLAR_CONFIG = {
     panelWatts:   440,
     panelAreaM2:  1.95,
 
-    // SELF-CONSUMPTION — the most important assumption in the whole tool.
+    // SELF-CONSUMPTION. The most important assumption in the whole tool.
     // Power used in the house as it's generated is worth the full 27c buy
     // rate. Power exported is worth 17c. So payback moves on this more than
     // on anything else.
@@ -141,7 +141,7 @@ window.SOLAR_CONFIG = {
     // We DON'T size the system to cover their whole bill. A big power user
     // sized that way ends up with an oversized array exporting cheap power,
     // which makes payback worse, not better. Instead we size to what the
-    // house can actually absorb during daylight — which is how installers
+    // house can actually absorb during daylight, which is how installers
     // size in practice, and it lands us in the same place Solar Scout got
     // to on the same inputs.
     //
@@ -153,7 +153,7 @@ window.SOLAR_CONFIG = {
       out:   0.25    // out all day
     },
 
-    // Solar output and household demand never line up perfectly — the sun
+    // Solar output and household demand never line up perfectly. The sun
     // peaks at midday, the kettle doesn't. This discounts for that mismatch.
     solarLoadMatch: 0.85,
 
@@ -232,7 +232,7 @@ window.SOLAR_CONFIG = {
 
 <style>
 /* ============================================================================
-   NZ Solar Savings Calculator — styles
+   NZ Solar Savings Calculator. Styles.
    Design: instrument panel. Cool paper, slate ink, one brand colour doing all
    the emphasis, and a fixed ochre used only for cautions. Every number is set
    in mono so figures read like a meter rather than marketing.
@@ -475,7 +475,7 @@ button { font: inherit; color: inherit; }
 .exit p { color: var(--ink-2); margin-top: .8rem; }
 
 /* ==========================================================================
-   RESULTS — breaks the two-column grid and runs full width.
+   RESULTS. Breaks the two-column grid and runs full width.
    ========================================================================== */
 .results { animation: question-in .4s cubic-bezier(.2,.8,.3,1) both; padding-top: 2rem; }
 
@@ -539,7 +539,7 @@ button { font: inherit; color: inherit; }
 .pill.is-good { background: var(--brand-wash); color: var(--brand-text); }
 .pill.is-warn { background: var(--flag-wash); color: var(--flag); }
 
-/* Assumptions — collapsed, but present. Credibility comes from showing your working. */
+/* Assumptions, collapsed but present. Credibility comes from showing your working. */
 .assumptions { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
 .assumptions summary { cursor: pointer; font-size: .88rem; color: var(--ink-2); }
 .assumptions summary:hover { color: var(--ink); }
@@ -587,7 +587,7 @@ button { font: inherit; color: inherit; }
 
 <script>
 /* ============================================================================
-   NZ DATA — shared across every client. You shouldn't need to touch this
+   NZ DATA. Shared across every client. You shouldn't need to touch this
    unless NZ rules or prices change. If a bank changes its green loan, this
    is the one place to fix it and every client gets the update.
    ============================================================================ */
@@ -595,7 +595,7 @@ button { font: inherit; color: inherit; }
 /* --- SOLAR YIELD BY REGION ---------------------------------------------------
    kWh generated per year, per kW of panels installed, on a good north roof.
 
-   >>> PLACEHOLDER DATA — TIM, REPLACE THIS WITH YOUR REAL TABLE. <<<
+   >>> PLACEHOLDER DATA. TIM, REPLACE THIS WITH YOUR REAL TABLE. <<<
    These are estimates in the right ballpark and in the order you gave me
    (Wellington top, then New Plymouth, Blenheim, Auckland), but the exact
    figures are guesses and every savings number on the page depends on them.
@@ -622,7 +622,7 @@ window.NZ_REGIONS = [
    Straight from your brief. If an installer gives you their own pricing,
    copy this shape into pricingOverride in config.js.
    Note: your 8kW and 10kW figures are identical ($15k–$18k). Left as given,
-   but worth a sanity check with an installer — I'd expect 10kW to be dearer.
+   but worth a sanity check with an installer, since I'd expect 10kW to be dearer.
 --------------------------------------------------------------------------- */
 window.NZ_SYSTEM_PRICING = [
   { kw: 3.0,  low:  8000, high: 10000 },
@@ -636,7 +636,7 @@ window.NZ_SYSTEM_PRICING = [
 /* --- BANK GREEN LOANS -----------------------------------------------------
    IMPORTANT: every one of these is a TOP-UP ON AN EXISTING MORTGAGE with
    that specific bank. Outright owners and renters do NOT qualify for any of
-   them. The tool must never imply otherwise — that's the fastest way to make
+   them. The tool must never imply otherwise, because that's the fastest way to make
    an installer look dishonest.
 --------------------------------------------------------------------------- */
 window.NZ_GREEN_LOANS = {
@@ -699,7 +699,7 @@ window.SolarCalc = (function () {
 
   /* Work backwards from a power bill to how many units (kWh) they use a year.
      We take the fixed daily line charge off first, because that part of the
-     bill has nothing to do with how much power they use — and solar won't
+     bill has nothing to do with how much power they use, and solar won't
      touch it either. */
   function annualUsageKwh(monthlyBill) {
     const a = A();
@@ -715,7 +715,7 @@ window.SolarCalc = (function () {
     return region.yield * A().orientationFactor[orientation];
   }
 
-  /* How much of a year's power this household uses in daylight — the load
+  /* How much of a year's power this household uses in daylight: the load
      solar can actually serve without a battery. */
   function daytimeLoadKwh(usageKwh, occupancy) {
     return usageKwh * A().daytimeUsageShare[occupancy];
@@ -765,7 +765,7 @@ window.SolarCalc = (function () {
     const loan = window.NZ_GREEN_LOANS[answers.bank];
     if (!loan || loan.kind === "none") {
       return Object.assign({}, noLoan, {
-        reason: "Your bank doesn't currently offer a solar green loan. Worth asking them anyway — and most installers offer their own finance."
+        reason: "Your bank doesn't currently offer a solar green loan. Worth asking them anyway, and most installers offer their own finance."
       });
     }
 
@@ -826,7 +826,7 @@ window.SolarCalc = (function () {
       const exported = Math.max(degraded - selfUsed, 0);
 
       // Power they buy gets dearer each year, which makes the power they
-      // DON'T buy worth more. We hold the export rate flat — buyback rates
+      // DON'T buy worth more. We hold the export rate flat, because buyback rates
       // have not tracked retail prices, and assuming they would overstates
       // the case.
       const buyRate = a.buyRatePerKwh * Math.pow(1 + a.electricityInflation, y - 1);
@@ -873,7 +873,7 @@ window.SolarCalc = (function () {
     const proj    = project(generation, daytime, costMid);
 
     // The share of everything generated that gets used in the house rather
-    // than exported. Worth showing — it's what makes the numbers work.
+    // than exported. Worth showing, because it's what makes the numbers work.
     const scr = proj.years[0].selfUsed / proj.years[0].generation;
 
     const yearOne     = proj.years[0];
@@ -919,7 +919,7 @@ window.SolarCalc = (function () {
 <script>
 /* ============================================================================
    THE PAGE. Runs the question flow, then draws the results.
-   Reads everything it needs from config.js — no client details live in here.
+   Reads everything it needs from config.js. No client details live in here.
    ============================================================================ */
 
 (function () {
@@ -946,7 +946,7 @@ window.SolarCalc = (function () {
                      (n < 10 ? n.toFixed(1) : Math.round(n)) + " years";
 
   /* --- Brand ---------------------------------------------------------------
-     A client's brand colour is a FILL. Some fills — yellow especially — are
+     A client's brand colour is a FILL. Some fills, yellow especially, are
      unreadable as text on a pale background. So we darken (or lighten) the
      brand colour until it passes contrast against the page, and use that
      wherever the colour has to be read rather than looked at.
@@ -1049,7 +1049,7 @@ window.SolarCalc = (function () {
     {
       id: "monthlyBill",
       question: "What's your power bill in a normal month?",
-      why: "This is the single most important number. Everything else — system size, savings, payback — is worked back from it.",
+      why: "This is the single most important number. Everything else (system size, savings, payback) is worked back from it.",
       railLabel: "Power bill",
       railValue: v => money(v) + "/month",
       render: renderBill
@@ -1079,7 +1079,7 @@ window.SolarCalc = (function () {
     {
       id: "ownership",
       question: "Do you own the home?",
-      why: "It decides what finance you can get — and whether solar is your call to make at all.",
+      why: "It decides what finance you can get, and whether solar is your call to make at all.",
       railLabel: "Ownership",
       railValue: v => ({ mortgage: "Own, with mortgage", outright: "Own outright", renting: "Renting" })[v],
       render: s => renderOptions(s, [
@@ -1134,7 +1134,7 @@ window.SolarCalc = (function () {
     {
       id: "contact",
       question: "Where should we send it?",
-      why: "Your results are on the next screen either way — this is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
+      why: "Your results are on the next screen either way. This is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
       render: renderContact
     }
   ];
@@ -1151,7 +1151,7 @@ window.SolarCalc = (function () {
 
     if (!recorded.length) {
       const li = el("li", "rail-empty",
-        "Seven questions. No address, no roof scan, no phone call — a real estimate at the end of it.");
+        "Seven questions. No address, no roof scan, no phone call. A real estimate at the end of it.");
       rail.appendChild(li);
       return;
     }
@@ -1187,7 +1187,7 @@ window.SolarCalc = (function () {
   }
 
   function advance() {
-    // Renting is a graceful dead end — they can't authorise an install.
+    // Renting is a graceful dead end: they can't authorise an install.
     if (answers.ownership === "renting") return renderRenterExit();
     const steps = liveSteps();
     if (stepIndex < steps.length - 1) { stepIndex++; render(); }
@@ -1350,7 +1350,7 @@ window.SolarCalc = (function () {
       const missing = fields.find(f => f.required && !data[f.name]);
       if (missing) return showError(err, "We need your " + missing.label.toLowerCase() + " to send this through.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email))
-        return showError(err, "That email doesn't look right — mind checking it?");
+        return showError(err, "That email doesn't look right. Mind checking it?");
 
       err.hidden = true;
       answers.contact = data;
@@ -1361,7 +1361,7 @@ window.SolarCalc = (function () {
 
     q.appendChild(form);
     const note = el("p", "form-note",
-      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof — no obligation, and no third parties.");
+      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof. No obligation, and no third parties.");
     q.appendChild(note);
   }
 
@@ -1372,7 +1372,7 @@ window.SolarCalc = (function () {
   }
 
   /* ==========================================================================
-     SUBMIT — push the lead, fire the tracking, then show the results.
+     SUBMIT. Push the lead, fire the tracking, then show the results.
      The results show whether or not the webhook succeeds. Never punish the
      homeowner for our plumbing failing.
      ========================================================================== */
@@ -1450,7 +1450,7 @@ window.SolarCalc = (function () {
       verdict.innerHTML = name + ", solar could take <em>" + pct(r.billOffset) +
         "</em> off your power bill.";
     } else {
-      verdict.innerHTML = name + ", solar would work here — but it's a <em>long</em> payback.";
+      verdict.innerHTML = name + ", solar would work here, but it's a <em>long</em> payback.";
     }
     out.appendChild(verdict);
 
@@ -1489,7 +1489,7 @@ window.SolarCalc = (function () {
 
     const d = el("p", "disclaimer");
     d.textContent = "These are estimates, not a quote. They're built from your power bill, " +
-      "regional sunshine figures and 2026 New Zealand install pricing — but every roof is different. " +
+      "regional sunshine figures and 2026 New Zealand install pricing, but every roof is different. " +
       CFG.client.name + " will confirm the numbers on site before you commit to anything.";
     out.appendChild(d);
 
@@ -1503,7 +1503,7 @@ window.SolarCalc = (function () {
     const s = el("section", "section");
     s.appendChild(el("h3", null, "What happens to your bill"));
     s.appendChild(el("p", "section-lede",
-      "Doing nothing isn't holding steady — New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
+      "Doing nothing isn't holding steady. New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
 
     const max = Math.max(r.monthlyBillIn10IfNothing, r.monthlyBillBefore, r.monthlyBillAfter);
     const bars = el("div", "bars");
@@ -1533,7 +1533,7 @@ window.SolarCalc = (function () {
     s.appendChild(el("h3", null, "The next 25 years"));
     s.appendChild(el("p", "section-lede",
       "Total savings against what you paid. Where the line crosses zero, the system has paid for itself. The dip at year " +
-      CFG.assumptions.inverterReplacement.year + " is a replacement inverter — we count it rather than pretend it away."));
+      CFG.assumptions.inverterReplacement.year + " is a replacement inverter, which we count rather than pretend away."));
 
     const W = 720, H = 280, PAD_L = 62, PAD_R = 16, PAD_T = 18, PAD_B = 34;
     const cost = r.cost.mid;
@@ -1654,7 +1654,7 @@ window.SolarCalc = (function () {
         c.limitM2 + "m², the property is in a standard wind zone, and the panels sit flush or on standard frames. " +
         "Yours is " + Math.round(c.areaM2) + "m². That saves roughly " +
         moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
-        " and several weeks — " + CFG.client.name + " will confirm your wind zone."));
+        " and several weeks. " + CFG.client.name + " will confirm your wind zone."));
     } else {
       con.appendChild(pill("Consent likely", "is-warn"));
       con.appendChild(el("h4", null, "This one probably needs consent"));
@@ -1663,7 +1663,7 @@ window.SolarCalc = (function () {
         "The October 2025 exemption covers installs under " + c.limitM2 +
         "m² of panels. At " + Math.round(c.areaM2) + "m² yours is over that, so budget another " +
         moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
-        " and a few extra weeks. A slightly smaller system may duck under the line — worth asking about."));
+        " and a few extra weeks. A slightly smaller system may duck under the line, so it's worth asking about."));
     }
     cards.appendChild(con);
 
@@ -1677,7 +1677,7 @@ window.SolarCalc = (function () {
   function seanzLine(f) {
     if (!f.seanz) return "";
     return CFG.client.seanzAccredited
-      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer — " +
+      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer. " +
         CFG.client.name + " are accredited, so that box is already ticked."
       : " " + f.bank + " require a SEANZ-accredited installer, so check that first.";
   }
@@ -1689,7 +1689,7 @@ window.SolarCalc = (function () {
   /* Show the working. Costs nothing and answers the sceptics. */
   function assumptionsSection(r) {
     const d = el("details", "assumptions");
-    const sum = el("summary", null, "The numbers behind this — every assumption we used");
+    const sum = el("summary", null, "The numbers behind this: every assumption we used");
     d.appendChild(sum);
     const a = CFG.assumptions;
     const rows = [

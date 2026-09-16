@@ -36,7 +36,7 @@
       if (window.fbq)  window.fbq("track", "Lead", { value: e.data.value, currency: "NZD" });
       if (window.gtag) window.gtag("event", "generate_lead", { value: e.data.value, currency: "NZD" });
 
-      // Scroll the results into view — on mobile the iframe has just got much
+      // Scroll the results into view. On mobile the iframe has just got much
       // taller and the reader would otherwise be left staring at the middle.
       var top = document.getElementById("solar-calc-wrap").getBoundingClientRect().top + window.scrollY;
       window.scrollTo({ top: top - 20, behavior: "smooth" });
