@@ -129,16 +129,16 @@
   const STEPS = [
     {
       id: "monthlyBill",
-      question: "What's your power bill in a normal month?",
-      why: "This is the single most important number. Everything else (system size, savings, payback) is worked back from it.",
+      question: "First up, what's a normal power bill for you?",
+      why: "A rough monthly figure is plenty, no need to go digging for the actual bill. Everything else we work out comes off this one number.",
       railLabel: "Power bill",
       railValue: v => money(v) + "/month",
       render: renderBill
     },
     {
       id: "region",
-      question: "Whereabouts in New Zealand are you?",
-      why: "Sunshine hours vary a lot across the country, and that changes how much power the same panels make.",
+      question: "Where are you in the country?",
+      why: "Some parts of New Zealand get a good deal more sun than others, and that changes what the same panels would make on your roof.",
       railLabel: "Region",
       railValue: v => (window.NZ_REGIONS.find(r => r.id === v) || {}).name || v,
       skip: () => CFG.region.lockToDefault,
@@ -147,32 +147,32 @@
     {
       id: "orientation",
       question: "Which way does your roof face?",
-      why: "North catches the most sun in New Zealand. East–west still works well. South is the hard one.",
+      why: "North is the sweet spot here. East and west still do nicely. South is the tricky one. Not sure? Pick the last option, plenty of people don't know.",
       railLabel: "Roof",
       railValue: v => ({ north: "North facing", eastWest: "East–west", south: "South facing", unsure: "Not sure yet" })[v],
       render: s => renderOptions(s, [
-        { value: "north",    label: "Mostly north",   note: "The best case here" },
-        { value: "eastWest", label: "East and west",  note: "Very common, works well" },
+        { value: "north",    label: "Mostly north",   note: "Best case, this one" },
+        { value: "eastWest", label: "East and west",  note: "Very common, and it works well" },
         { value: "south",    label: "Mostly south",   note: "Harder, but not a dead end" },
-        { value: "unsure",   label: "I'm not sure",   note: "We'll assume a typical roof" }
+        { value: "unsure",   label: "No idea, sorry",  note: "All good, we'll assume a typical roof" }
       ], "two-up")
     },
     {
       id: "ownership",
-      question: "Do you own the home?",
-      why: "It decides what finance you can get, and whether solar is your call to make at all.",
+      question: "Do you own the place?",
+      why: "This one decides what finance you can get, and whether the decision is even yours to make.",
       railLabel: "Ownership",
       railValue: v => ({ mortgage: "Own, with mortgage", outright: "Own outright", renting: "Renting" })[v],
       render: s => renderOptions(s, [
-        { value: "mortgage", label: "Yes, with a mortgage", note: "May open up a low-rate green loan" },
-        { value: "outright", label: "Yes, owned outright",  note: "No mortgage on it" },
+        { value: "mortgage", label: "Yes, with a mortgage", note: "This could open up a low-rate green loan" },
+        { value: "outright", label: "Yes, owned outright",  note: "Mortgage-free" },
         { value: "renting",  label: "No, I rent",           note: "" }
       ])
     },
     {
       id: "bank",
       question: "Who's your mortgage with?",
-      why: "Every solar green loan in New Zealand is a top-up on an existing mortgage with that same bank. So the answer here decides whether you get one at all.",
+      why: "Every solar green loan going is a top-up on a mortgage you already have with that same bank. So this answer decides whether one is on the table at all.",
       railLabel: "Bank",
       railValue: v => (window.NZ_GREEN_LOANS[v] || {}).bank || v,
       // Counted in the total until we know they don't need it, so the
@@ -189,33 +189,33 @@
     },
     {
       id: "equity",
-      question: "Roughly how much equity do you have?",
-      why: "Green loans generally need about 20% equity. We'd rather tell you that now than have a bank tell you later.",
+      question: "Roughly how much of the house is yours?",
+      why: "Green loans usually want to see about 20% equity. Better you hear that from us now than from a bank in three weeks.",
       railLabel: "Equity",
       railValue: v => ({ "20plus": "20% or more", under20: "Under 20%", unsure: "Not sure" })[v],
       skip: () => answers.ownership != null && answers.ownership !== "mortgage",
       render: s => renderOptions(s, [
         { value: "20plus",  label: "20% or more",  note: "The usual threshold" },
         { value: "under20", label: "Less than 20%" },
-        { value: "unsure",  label: "Not sure" }
+        { value: "unsure",  label: "Honestly, no idea" }
       ])
     },
     {
       id: "occupancy",
-      question: "Is anyone usually home during the day?",
-      why: "Power you use as the panels make it is worth about 27c a unit. Power you export is worth about 17c. So this changes the numbers more than almost anything else.",
+      question: "Anyone usually home during the day?",
+      why: "Power you use while the panels are making it is worth about 27c a unit. Power you sell back is worth about 17c. So this shifts the numbers more than you'd think.",
       railLabel: "Daytime",
       railValue: v => ({ home: "Home during day", mixed: "Sometimes home", out: "Out during day" })[v],
       render: s => renderOptions(s, [
-        { value: "home",  label: "Usually someone home", note: "Shift work, working from home, retired, young family" },
-        { value: "mixed", label: "Some days",            note: "A mix through the week" },
-        { value: "out",   label: "Usually out",          note: "Out at work weekdays" }
+        { value: "home",  label: "Usually someone home", note: "Working from home, shift work, retired, young family" },
+        { value: "mixed", label: "Some days, not others", note: "A bit of a mix through the week" },
+        { value: "out",   label: "Usually out",          note: "Out at work through the week" }
       ])
     },
     {
       id: "contact",
-      question: "Where should we send it?",
-      why: "Your results are on the next screen either way. This is so " + CFG.client.name + " can talk you through them and confirm the numbers on your actual roof.",
+      question: "Almost there. Where do we send this?",
+      why: "Your numbers are on the next screen either way. This is just so " + CFG.client.name + " can walk you through them and check them against your actual roof.",
       render: renderContact
     }
   ];
@@ -232,7 +232,7 @@
 
     if (!recorded.length) {
       const li = el("li", "rail-empty",
-        "Seven questions. No address, no roof scan, no phone call. A real estimate at the end of it.");
+        "Seven quick questions. No address, no roof scan, nobody ringing you mid-dinner. Just a real estimate at the end of it.");
       rail.appendChild(li);
       return;
     }
@@ -363,16 +363,16 @@
     panel.innerHTML = "";
     const wrap = el("div", "question");
     wrap.appendChild(el("p", "eyebrow", "One thing first"));
-    wrap.appendChild(el("h2", null, "Solar is your landlord's call, not yours."));
+    wrap.appendChild(el("h2", null, "Ah, this one's your landlord's call."));
     const body = el("div", "exit");
     body.appendChild(el("p", null,
-      "Panels get fixed to the roof and paid off over years, so the decision sits with whoever owns the place. There's no version of this where we can quote you directly, and we'd rather say that than take your details."));
+      "Panels get bolted to the roof and paid off over years, so it sits with whoever owns the place. There's no version of this where we can quote you directly, and we'd rather tell you that now than take your details and waste your time."));
     body.appendChild(el("p", null,
-      "If you'd like to raise it with your landlord, it's a genuinely good pitch: solar lifts a property's value and its Homestar rating, and the tenant sees the lower bills. Send them here."));
+      "Worth raising with them though, it's a decent pitch: solar lifts a property's value and its Homestar rating, and you'd be the one seeing the smaller bills. Feel free to send them this way."));
     wrap.appendChild(body);
 
     const actions = el("div", "actions");
-    const b = el("button", "btn btn-quiet", "Actually, I own this home");
+    const b = el("button", "btn btn-quiet", "Hang on, I do own this place");
     b.type = "button";
     b.addEventListener("click", () => { delete answers.ownership; render(); });
     actions.appendChild(b);
@@ -429,20 +429,20 @@
       fields.forEach(f => { data[f.name] = form.elements[f.name].value.trim(); });
 
       const missing = fields.find(f => f.required && !data[f.name]);
-      if (missing) return showError(err, "We need your " + missing.label.toLowerCase() + " to send this through.");
+      if (missing) return showError(err, "Just need your " + missing.label.toLowerCase() + " so we can get this to you.");
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email))
-        return showError(err, "That email doesn't look right. Mind checking it?");
+        return showError(err, "That email looks a bit off. Mind giving it another look?");
 
       err.hidden = true;
       answers.contact = data;
       submit.disabled = true;
-      submit.textContent = "Working it out…";
+      submit.textContent = "Crunching the numbers…";
       finish();
     });
 
     q.appendChild(form);
     const note = el("p", "form-note",
-      "We'll send a copy to your email. " + CFG.client.name + " will follow up to confirm the numbers against your actual roof. No obligation, and no third parties.");
+      "We'll send a copy through to you. " + CFG.client.name + " will be in touch to go over it. No obligation, and we don't pass your details to anyone else.");
     q.appendChild(note);
   }
 
@@ -531,26 +531,26 @@
       verdict.innerHTML = name + ", solar could take <em>" + pct(r.billOffset) +
         "</em> off your power bill.";
     } else {
-      verdict.innerHTML = name + ", solar would work here, but it's a <em>long</em> payback.";
+      verdict.innerHTML = name + ", solar would work here. It's just a <em>long</em> wait to pay off.";
     }
     out.appendChild(verdict);
 
     const sub = el("p", "verdict-sub");
     sub.textContent = worthIt
-      ? "About " + money(r.annualSaving) + " a year, from " + r.panelCount +
-        " panels on your roof. Worked out on your bill and Hawke's Bay sunshine, not a national average."
-      : "Your power bill is modest enough that the system takes a while to pay for itself. Here are the real numbers rather than a sales pitch.";
+      ? "That's about " + money(r.annualSaving) + " a year, from " + r.panelCount +
+        " panels up there. Worked out on your bill and your local sunshine, not some national average."
+      : "Your bill is modest enough that the system takes a fair while to pay for itself. Here are the honest numbers rather than a sales pitch.";
     out.appendChild(sub);
 
     /* Headline figures */
     const figures = el("div", "figures");
     [
       { label: "Your system",   value: r.system.kw + " kW",
-        note: r.panelCount + " panels, about " + Math.round(r.consent.areaM2) + "m² of roof" },
+        note: r.panelCount + " panels, about " + Math.round(r.consent.areaM2) + "m² of your roof" },
       { label: "Installed cost", value: moneyRange(r.cost.low, r.cost.high),
-        note: "Incl. GST. Confirmed on site." },
+        note: "Incl. GST, and confirmed on site" },
       { label: "Saved per year", value: money(r.annualSaving), cls: "is-gain",
-        note: "In year one, rising as power prices do" },
+        note: "Year one, and it climbs as power prices do" },
       { label: "Pays for itself", value: years(r.payback), cls: worthIt ? "is-gain" : "is-flag",
         note: "Then " + years(25 - (r.payback || 25)).replace("25+ years", "20+ years") + " of savings" }
     ].forEach(f => {
@@ -569,9 +569,9 @@
     out.appendChild(ctaSection(r));
 
     const d = el("p", "disclaimer");
-    d.textContent = "These are estimates, not a quote. They're built from your power bill, " +
-      "regional sunshine figures and 2026 New Zealand install pricing, but every roof is different. " +
-      CFG.client.name + " will confirm the numbers on site before you commit to anything.";
+    d.textContent = "These are estimates rather than a quote. They come from your power bill, " +
+      "local sunshine figures and 2026 New Zealand install pricing, but every roof is its own thing. " +
+      CFG.client.name + " will check it all on site before you commit to anything.";
     out.appendChild(d);
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -584,7 +584,7 @@
     const s = el("section", "section");
     s.appendChild(el("h3", null, "What happens to your bill"));
     s.appendChild(el("p", "section-lede",
-      "Doing nothing isn't holding steady. New Zealand power prices rose about 31% in the last five years. Solar fixes most of your cost at today's rate."));
+      "Sitting tight isn't the same as staying put. Power prices here have climbed about 31% in five years. Solar locks most of your cost in at today's rate."));
 
     const max = Math.max(r.monthlyBillIn10IfNothing, r.monthlyBillBefore, r.monthlyBillAfter);
     const bars = el("div", "bars");
@@ -613,8 +613,8 @@
     const s = el("section", "section");
     s.appendChild(el("h3", null, "The next 25 years"));
     s.appendChild(el("p", "section-lede",
-      "Total savings against what you paid. Where the line crosses zero, the system has paid for itself. The dip at year " +
-      CFG.assumptions.inverterReplacement.year + " is a replacement inverter, which we count rather than pretend away."));
+      "Your total savings against what you paid. Where the line crosses zero, the system has paid for itself. That dip at year " +
+      CFG.assumptions.inverterReplacement.year + " is a replacement inverter, which we count in rather than quietly leave out."));
 
     const W = 720, H = 280, PAD_L = 62, PAD_R = 16, PAD_T = 18, PAD_B = 34;
     const cost = r.cost.mid;
@@ -677,9 +677,9 @@
 
     const total = el("p", "section-lede");
     total.style.marginTop = "1.1rem";
-    total.textContent = "Over 25 years that's roughly " +
+    total.textContent = "Over 25 years that's somewhere around " +
       moneyRange(r.savings25.low, r.savings25.high) +
-      " back in your pocket, after the system and a replacement inverter are paid for.";
+      " back in your pocket, and that's after the system and a new inverter are paid for.";
     s.appendChild(total);
     return s;
   }
@@ -695,7 +695,7 @@
     const f = r.finance;
     if (f.eligible && f.kind === "loan") {
       fin.className = "card is-good";
-      fin.appendChild(pill("You likely qualify", "is-good"));
+      fin.appendChild(pill("Looks like you qualify", "is-good"));
       fin.appendChild(el("h4", null, f.product));
       fin.appendChild(el("div", "card-figure mono", money(f.monthly) + "/month"));
       fin.appendChild(el("p", null,
@@ -704,16 +704,16 @@
         "Your monthly saving of " + money(r.annualSaving / 12) +
         (r.annualSaving / 12 >= f.monthly
           ? " more than covers that repayment from day one."
-          : " covers most of it, so you're out of pocket about " +
+          : " covers a good chunk of it, so you'd be out of pocket about " +
             money(f.monthly - r.annualSaving / 12) + " a month until it's paid off.") +
         seanzLine(f)));
     } else if (f.eligible && f.kind === "cashback") {
       fin.className = "card is-good";
-      fin.appendChild(pill("You likely qualify", "is-good"));
+      fin.appendChild(pill("Looks like you qualify", "is-good"));
       fin.appendChild(el("h4", null, f.product));
       fin.appendChild(el("div", "card-figure mono", money(f.cashback)));
       fin.appendChild(el("p", null,
-        f.bank + " give a " + money(f.cashback) + " cashback on solar rather than a discounted rate, so you'd be paying standard rates on the balance." +
+        f.bank + " do a " + money(f.cashback) + " cashback on solar rather than a cheaper rate, so you'd be on standard rates for the rest." +
         seanzLine(f)));
     } else {
       fin.appendChild(pill("No green loan", "is-warn"));
@@ -728,23 +728,23 @@
     if (c.likelyExempt) {
       con.className = "card is-good";
       con.appendChild(pill("Likely no consent", "is-good"));
-      con.appendChild(el("h4", null, "You probably don't need building consent"));
+      con.appendChild(el("h4", null, "You probably won't need building consent"));
       con.appendChild(el("div", "card-figure mono", Math.round(c.areaM2) + "m²"));
       con.appendChild(el("p", null,
-        "Since October 2025 most home solar installs are consent-exempt if the panels cover under " +
-        c.limitM2 + "m², the property is in a standard wind zone, and the panels sit flush or on standard frames. " +
-        "Yours is " + Math.round(c.areaM2) + "m². That saves roughly " +
+        "Since October 2025 most home solar installs don't need consent, as long as the panels cover under " +
+        c.limitM2 + "m², the property sits in a standard wind zone, and the panels go on flush or on standard frames. " +
+        "Yours comes to " + Math.round(c.areaM2) + "m². That saves you roughly " +
         moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
         " and several weeks. " + CFG.client.name + " will confirm your wind zone."));
     } else {
       con.appendChild(pill("Consent likely", "is-warn"));
-      con.appendChild(el("h4", null, "This one probably needs consent"));
+      con.appendChild(el("h4", null, "This one probably does need consent"));
       con.appendChild(el("div", "card-figure mono", Math.round(c.areaM2) + "m²"));
       con.appendChild(el("p", null,
         "The October 2025 exemption covers installs under " + c.limitM2 +
-        "m² of panels. At " + Math.round(c.areaM2) + "m² yours is over that, so budget another " +
+        "m² of panels, and at " + Math.round(c.areaM2) + "m² yours goes over. So put aside another " +
         moneyRange(window.NZ_CONSENT.savingLow, window.NZ_CONSENT.savingHigh) +
-        " and a few extra weeks. A slightly smaller system may duck under the line, so it's worth asking about."));
+        " and a few extra weeks. A slightly smaller system might duck under the line, which is worth asking about."));
     }
     cards.appendChild(con);
 
@@ -758,7 +758,7 @@
   function seanzLine(f) {
     if (!f.seanz) return "";
     return CFG.client.seanzAccredited
-      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer. " +
+      ? " " + f.bank + " only lend on installs by a SEANZ-accredited installer, and " +
         CFG.client.name + " are accredited, so that box is already ticked."
       : " " + f.bank + " require a SEANZ-accredited installer, so check that first.";
   }
@@ -770,7 +770,7 @@
   /* Show the working. Costs nothing and answers the sceptics. */
   function assumptionsSection(r) {
     const d = el("details", "assumptions");
-    const sum = el("summary", null, "The numbers behind this: every assumption we used");
+    const sum = el("summary", null, "Want to see our working? Every number we used");
     d.appendChild(sum);
     const a = CFG.assumptions;
     const rows = [
@@ -800,13 +800,13 @@
 
   function ctaSection(r) {
     const s = el("section", "cta");
-    s.appendChild(el("h3", null, "Want these numbers checked on your actual roof?"));
+    s.appendChild(el("h3", null, "Want someone to check these on your actual roof?"));
     const p = el("p", null,
       CFG.client.proofPoint ? CFG.client.proofPoint :
       CFG.client.name + " will confirm the estimate on site, at no cost.");
     s.appendChild(p);
     s.appendChild(el("p", null,
-      "We've sent a copy to " + answers.contact.email + ". Someone will be in touch to walk you through it."));
+      "We've sent a copy to " + answers.contact.email + ", so it's yours to keep. Someone will be in touch to talk it through."));
 
     const actions = el("div", "cta-actions");
     if (CFG.client.phone) {

@@ -70,15 +70,15 @@ window.SolarCalc = (function () {
     if (answers.ownership !== "mortgage") {
       return Object.assign({}, noLoan, {
         reason: answers.ownership === "outright"
-          ? "Green loans are top-ups on an existing mortgage, so owning outright means you can't use one. Cash or an installer finance plan are your options."
-          : "Green loans need an existing mortgage."
+          ? "Green loans are top-ups on a mortgage you already have, so owning the place outright rules them out. Cash or an installer finance plan are your options."
+          : "Green loans need a mortgage to top up."
       });
     }
 
     const loan = window.NZ_GREEN_LOANS[answers.bank];
     if (!loan || loan.kind === "none") {
       return Object.assign({}, noLoan, {
-        reason: "Your bank doesn't currently offer a solar green loan. Worth asking them anyway, and most installers offer their own finance."
+        reason: "Your bank doesn't do a solar green loan at the moment. Still worth asking, and most installers have their own finance too."
       });
     }
 
@@ -86,8 +86,8 @@ window.SolarCalc = (function () {
       return Object.assign({}, noLoan, {
         bank: loan.bank,
         reason: answers.equity === "under20"
-          ? loan.bank + " green loans need about 20% equity in your home. Under that, you'd be looking at cash or installer finance."
-          : loan.bank + " green loans need about 20% equity. Worth checking your balance before you count on it."
+          ? loan.bank + " green loans want about 20% equity in the place. Under that, you'd be looking at cash or installer finance."
+          : loan.bank + " green loans want about 20% equity, so worth checking where you're at before counting on it."
       });
     }
 
