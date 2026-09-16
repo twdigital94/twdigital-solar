@@ -64,6 +64,50 @@ window.SOLAR_CONFIG = {
     customCssUrl: ""
   },
 
+  /* --- The map step. --------------------------------------------------------
+     Shows the homeowner an aerial photo of their place and asks them to drag
+     it so the pin sits on their roof.
+
+     It does NOT make the estimate more accurate. Their power bill drives
+     system size far more than the roof does. What it does do is make the tool
+     feel like it's about their actual house, and it hands the installer an
+     address and a set of coordinates with every lead, which is worth real
+     money to them for quoting and routing.
+
+     To turn it on you need a free LINZ Basemaps key from
+     https://basemaps.linz.govt.nz (sign in, create a key, paste it below).
+     Without a key the step quietly becomes a plain address box, so nothing
+     breaks if you leave this off.                                          */
+  address: {
+    enabled: true,
+
+    // Free from basemaps.linz.govt.nz. Leave blank to skip the imagery and
+    // just collect a typed address.
+    linzBasemapsKey: "",
+
+    // The imagery tiles. {z}/{x}/{y} get filled in as the map moves, and
+    // {key} is your key above. Only change this if LINZ change their URL
+    // format or you want a different imagery set.
+    tileUrlTemplate:
+      "https://basemaps.linz.govt.nz/v1/tiles/aerial/WebMercatorQuad/{z}/{x}/{y}.webp?api={key}",
+    attribution: "Imagery \u00a9 LINZ Basemaps, CC BY 4.0",
+
+    // Where the map opens before they've found themselves. Set this to the
+    // middle of the installer's patch. This is Napier.
+    defaultCentre: { lat: -39.4928, lon: 176.9120, zoom: 13 },
+
+    // The zoom we jump to once they've said "that's my place".
+    roofZoom: 19,
+
+    // Offer the "use my location" button. Phones handle this well and it
+    // saves a lot of typing, but it does trigger a browser permission prompt.
+    offerGeolocation: true,
+
+    // Make them position the pin before continuing. Leave false. An address
+    // is nice to have, and never worth losing a lead over.
+    required: false
+  },
+
   /* --- Region --- */
   region: {
     default: "hawkes-bay",

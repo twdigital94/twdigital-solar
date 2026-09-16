@@ -13,7 +13,7 @@ html = html.replace(
   "<style>\n" + read("assets/css/styles.css") + "\n</style>"
 );
 
-["config", "nz-data", "calculator", "app"].forEach(name => {
+["config", "nz-data", "map", "calculator", "app"].forEach(name => {
   html = html.replace(
     new RegExp('<script src="assets/js/' + name + '\\.js"></script>'),
     "<script>\n" + read("assets/js/" + name + ".js") + "\n</script>"

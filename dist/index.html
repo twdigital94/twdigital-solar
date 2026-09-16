@@ -77,6 +77,50 @@ window.SOLAR_CONFIG = {
     customCssUrl: ""
   },
 
+  /* --- The map step. --------------------------------------------------------
+     Shows the homeowner an aerial photo of their place and asks them to drag
+     it so the pin sits on their roof.
+
+     It does NOT make the estimate more accurate. Their power bill drives
+     system size far more than the roof does. What it does do is make the tool
+     feel like it's about their actual house, and it hands the installer an
+     address and a set of coordinates with every lead, which is worth real
+     money to them for quoting and routing.
+
+     To turn it on you need a free LINZ Basemaps key from
+     https://basemaps.linz.govt.nz (sign in, create a key, paste it below).
+     Without a key the step quietly becomes a plain address box, so nothing
+     breaks if you leave this off.                                          */
+  address: {
+    enabled: true,
+
+    // Free from basemaps.linz.govt.nz. Leave blank to skip the imagery and
+    // just collect a typed address.
+    linzBasemapsKey: "",
+
+    // The imagery tiles. {z}/{x}/{y} get filled in as the map moves, and
+    // {key} is your key above. Only change this if LINZ change their URL
+    // format or you want a different imagery set.
+    tileUrlTemplate:
+      "https://basemaps.linz.govt.nz/v1/tiles/aerial/WebMercatorQuad/{z}/{x}/{y}.webp?api={key}",
+    attribution: "Imagery \u00a9 LINZ Basemaps, CC BY 4.0",
+
+    // Where the map opens before they've found themselves. Set this to the
+    // middle of the installer's patch. This is Napier.
+    defaultCentre: { lat: -39.4928, lon: 176.9120, zoom: 13 },
+
+    // The zoom we jump to once they've said "that's my place".
+    roofZoom: 19,
+
+    // Offer the "use my location" button. Phones handle this well and it
+    // saves a lot of typing, but it does trigger a browser permission prompt.
+    offerGeolocation: true,
+
+    // Make them position the pin before continuing. Leave false. An address
+    // is nice to have, and never worth losing a lead over.
+    required: false
+  },
+
   /* --- Region --- */
   region: {
     default: "hawkes-bay",
@@ -440,6 +484,73 @@ button { font: inherit; color: inherit; }
 .bill-slider { width: 100%; margin: 1.5rem 0 .4rem; accent-color: var(--brand); height: 24px; }
 .bill-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .72rem; color: var(--ink-3); }
 
+
+/* --- The map step ---------------------------------------------------------
+   The pin sits fixed in the middle and the photo moves underneath it, which
+   is far easier on a phone than dragging a small marker.                   */
+.place { margin-top: 1.6rem; max-width: 34rem; display: flex; flex-direction: column; gap: .9rem; }
+.place .field { max-width: none; }
+
+.map {
+  position: relative;
+  height: clamp(260px, 42vw, 360px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: grab;
+  touch-action: none;          /* we handle the dragging ourselves */
+  user-select: none;
+}
+.map.is-dragging { cursor: grabbing; }
+.map.is-unavailable { display: none; }
+
+.map-surface { position: absolute; inset: 0; }
+.map-tile {
+  position: absolute; top: 0; left: 0;
+  width: 256px; height: 256px;
+  will-change: transform;
+  pointer-events: none;
+}
+.map-tile.is-missing { visibility: hidden; }
+
+/* The pin. Sits dead centre, with a shadow so it reads against dark roofs
+   and light driveways alike. */
+.map-pin {
+  position: absolute; left: 50%; top: 50%;
+  width: 26px; height: 26px; margin: -30px 0 0 -13px;
+  pointer-events: none;
+  background: var(--brand);
+  border: 2.5px solid #FFFFFF;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.45);
+}
+.map-pin::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 7px; height: 7px; border-radius: 50%; background: #FFFFFF;
+}
+
+.map-controls { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; }
+.map-controls button {
+  width: 32px; height: 32px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+  border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.map-controls button:hover { border-color: var(--ink-3); }
+
+.map-credit {
+  position: absolute; right: 0; bottom: 0;
+  font-size: .62rem; padding: .2rem .45rem;
+  background: rgba(255,255,255,.82); color: #2B2B2B;
+  border-top-left-radius: 5px; pointer-events: none;
+}
+
+.place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }
+/* Flex column would otherwise stretch these full width. */
+.place > .btn-link { align-self: flex-start; }
+
 /* --- Buttons -------------------------------------------------------------- */
 .actions { display: flex; align-items: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
 .btn {
@@ -602,21 +713,59 @@ button { font: inherit; color: inherit; }
    Send me your table and this becomes a 2-minute fix.
 --------------------------------------------------------------------------- */
 window.NZ_REGIONS = [
-  { id: "northland",     name: "Northland",           yield: 1270 },
-  { id: "auckland",      name: "Auckland",            yield: 1290 },
-  { id: "waikato",       name: "Waikato / Hamilton",  yield: 1230 },
-  { id: "bay-of-plenty", name: "Bay of Plenty",       yield: 1280 },
-  { id: "gisborne",      name: "Gisborne",            yield: 1275 },
-  { id: "hawkes-bay",    name: "Hawke's Bay",         yield: 1285 },
-  { id: "taranaki",      name: "Taranaki",            yield: 1320 },
-  { id: "manawatu",      name: "Manawatū / Whanganui",yield: 1240 },
-  { id: "wellington",    name: "Wellington",          yield: 1340 },
-  { id: "nelson",        name: "Nelson",              yield: 1300 },
-  { id: "marlborough",   name: "Marlborough",         yield: 1310 },
-  { id: "canterbury",    name: "Canterbury",          yield: 1250 },
-  { id: "otago",         name: "Otago",               yield: 1210 },
-  { id: "southland",     name: "Southland",           yield: 1120 }
+  { id: "northland",     name: "Northland",           yield: 1270,
+    points: [[-35.72, 174.32], [-35.11, 173.26]] },
+  { id: "auckland",      name: "Auckland",            yield: 1290,
+    points: [[-36.85, 174.76], [-37.21, 174.90]] },
+  { id: "waikato",       name: "Waikato / Hamilton",  yield: 1230,
+    points: [[-37.79, 175.28], [-38.69, 176.07], [-37.65, 175.16]] },
+  { id: "bay-of-plenty", name: "Bay of Plenty",       yield: 1280,
+    points: [[-37.69, 176.17], [-38.14, 176.25]] },
+  { id: "gisborne",      name: "Gisborne",            yield: 1275,
+    points: [[-38.66, 178.02]] },
+  { id: "hawkes-bay",    name: "Hawke's Bay",         yield: 1285,
+    points: [[-39.49, 176.91], [-39.64, 176.85]] },
+  { id: "taranaki",      name: "Taranaki",            yield: 1320,
+    points: [[-39.06, 174.08], [-39.50, 174.28]] },
+  { id: "manawatu",      name: "Manawat\u016b / Whanganui", yield: 1240,
+    points: [[-40.35, 175.61], [-39.93, 175.05], [-40.75, 175.15]] },
+  { id: "wellington",    name: "Wellington",          yield: 1340,
+    points: [[-41.29, 174.78], [-41.13, 175.07], [-40.95, 175.66]] },
+  { id: "nelson",        name: "Nelson",              yield: 1300,
+    points: [[-41.27, 173.28], [-41.50, 172.83]] },
+  { id: "marlborough",   name: "Marlborough",         yield: 1310,
+    points: [[-41.51, 173.95]] },
+  { id: "canterbury",    name: "Canterbury",          yield: 1250,
+    points: [[-43.53, 172.63], [-44.40, 171.25], [-42.40, 173.68], [-43.90, 170.47]] },
+  { id: "otago",         name: "Otago",               yield: 1210,
+    points: [[-45.87, 170.50], [-45.03, 168.66], [-44.70, 169.14], [-45.10, 170.97]] },
+  { id: "southland",     name: "Southland",           yield: 1120,
+    points: [[-46.41, 168.35], [-46.10, 168.94], [-45.42, 167.72]] }
 ];
+
+/* Work out which region a dropped map pin sits in, by finding the nearest
+   listed town. Several regions need more than one point: nearest-to-Dunedin
+   would put Queenstown in Southland, which is both wrong and a worse
+   sunshine figure. Still crude near a boundary, but it only picks a sunshine
+   number, and neighbouring regions have similar ones. Saving the question is
+   worth more than the last few percent of precision.
+   Only used when the map step is on and the installer covers more than one
+   region. */
+window.nzRegionFromCoords = function (lat, lon) {
+  var best = null, bestDist = Infinity;
+  window.NZ_REGIONS.forEach(function (r) {
+    r.points.forEach(function (pt) {
+      // Flat approximation, corrected for longitude converging toward the
+      // pole. Plenty accurate over a country this size and far cheaper than
+      // a proper great-circle distance.
+      var dLat = pt[0] - lat;
+      var dLon = (pt[1] - lon) * Math.cos(lat * Math.PI / 180);
+      var d = dLat * dLat + dLon * dLon;
+      if (d < bestDist) { bestDist = d; best = r; }
+    });
+  });
+  return best;
+};
 
 /* --- INSTALLED PRICING (incl. GST), 2026 NZ rates -------------------------
    Straight from your brief. If an installer gives you their own pricing,
@@ -682,6 +831,238 @@ window.NZ_CONSENT = {
   savingLow: 1000,
   savingHigh: 2000
 };
+
+</script>
+<script>
+/* ============================================================================
+   A small aerial map. No libraries.
+
+   Shows LINZ aerial photography with a pin fixed in the middle. The person
+   drags the photo until their house sits under the pin, which is easier on a
+   phone than dragging a tiny marker around.
+
+   Everything external is optional. If the imagery key is missing, or LINZ is
+   having a bad day, the whole thing steps aside and they type their address
+   instead. It must never be the reason a lead is lost.
+   ============================================================================ */
+
+window.SolarMap = (function () {
+  "use strict";
+
+  var TILE = 256;
+
+  /* --- Web Mercator. The standard maths every slippy map uses. ------------- */
+  function worldSize(z) { return TILE * Math.pow(2, z); }
+
+  function lonToX(lon, z) { return (lon + 180) / 360 * worldSize(z); }
+
+  function latToY(lat, z) {
+    var s = Math.sin(lat * Math.PI / 180);
+    return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * worldSize(z);
+  }
+
+  function xToLon(x, z) { return x / worldSize(z) * 360 - 180; }
+
+  function yToLat(y, z) {
+    var n = Math.PI - 2 * Math.PI * y / worldSize(z);
+    return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+  }
+
+  /* --- The map ------------------------------------------------------------- */
+  function create(container, opts) {
+    var cfg = opts || {};
+    var centre = { lat: cfg.lat, lon: cfg.lon };
+    var zoom = cfg.zoom || 18;
+    var minZoom = cfg.minZoom || 14;
+    var maxZoom = cfg.maxZoom || 20;
+    var onMove = cfg.onMove || function () {};
+    var tileUrl = cfg.tileUrl;
+    var failed = false;
+
+    container.classList.add("map");
+    container.innerHTML = "";
+
+    var surface = document.createElement("div");
+    surface.className = "map-surface";
+    container.appendChild(surface);
+
+    var pin = document.createElement("div");
+    pin.className = "map-pin";
+    pin.setAttribute("aria-hidden", "true");
+    container.appendChild(pin);
+
+    var controls = document.createElement("div");
+    controls.className = "map-controls";
+    [["+", 1, "Zoom in"], ["−", -1, "Zoom out"]].forEach(function (c) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = c[0];
+      b.setAttribute("aria-label", c[2]);
+      b.addEventListener("click", function () { setZoom(zoom + c[1]); });
+      controls.appendChild(b);
+    });
+    container.appendChild(controls);
+
+    var credit = document.createElement("div");
+    credit.className = "map-credit";
+    credit.textContent = cfg.attribution || "Imagery © LINZ Basemaps, CC BY 4.0";
+    container.appendChild(credit);
+
+    /* Track failed tiles. A couple is normal at the edge of coverage; a
+       screenful means the key is wrong or the service is down, and we should
+       get out of the way rather than show a grey box. */
+    var loaded = 0, errored = 0;
+    function noteTile(ok) {
+      if (ok) { loaded++; return; }
+      errored++;
+      if (!failed && errored >= 6 && loaded === 0) {
+        failed = true;
+        container.classList.add("is-unavailable");
+        if (cfg.onUnavailable) cfg.onUnavailable();
+      }
+    }
+
+    var tiles = {};   // key -> img, so panning back doesn't refetch
+
+    function draw() {
+      var w = container.clientWidth, h = container.clientHeight;
+      if (!w || !h) return;
+
+      var cx = lonToX(centre.lon, zoom), cy = latToY(centre.lat, zoom);
+      var left = cx - w / 2, top = cy - h / 2;
+      var x0 = Math.floor(left / TILE), y0 = Math.floor(top / TILE);
+      var x1 = Math.floor((left + w) / TILE), y1 = Math.floor((top + h) / TILE);
+      var span = Math.pow(2, zoom);
+      var wanted = {};
+
+      for (var tx = x0; tx <= x1; tx++) {
+        for (var ty = y0; ty <= y1; ty++) {
+          if (ty < 0 || ty >= span) continue;
+          var wrapped = ((tx % span) + span) % span;   // let it wrap east-west
+          var key = zoom + "/" + wrapped + "/" + ty;
+          var slot = key + "@" + tx;
+          wanted[slot] = true;
+
+          var img = tiles[slot];
+          if (!img) {
+            img = document.createElement("img");
+            img.className = "map-tile";
+            img.alt = "";
+            img.decoding = "async";
+            img.addEventListener("load", function () { noteTile(true); });
+            img.addEventListener("error", function () {
+              this.classList.add("is-missing");
+              noteTile(false);
+            });
+            img.src = tileUrl
+              .replace("{z}", zoom).replace("{x}", wrapped).replace("{y}", ty);
+            surface.appendChild(img);
+            tiles[slot] = img;
+          }
+          img.style.transform =
+            "translate(" + (tx * TILE - left) + "px," + (ty * TILE - top) + "px)";
+        }
+      }
+
+      // Drop tiles that have scrolled well out of view.
+      Object.keys(tiles).forEach(function (slot) {
+        if (!wanted[slot]) { tiles[slot].remove(); delete tiles[slot]; }
+      });
+    }
+
+    function setZoom(z) {
+      z = Math.max(minZoom, Math.min(maxZoom, z));
+      if (z === zoom) return;
+      zoom = z;
+      Object.keys(tiles).forEach(function (k) { tiles[k].remove(); });
+      tiles = {};
+      draw();
+      onMove(getCentre());
+    }
+
+    function setCentre(lat, lon, z) {
+      centre = { lat: lat, lon: lon };
+      if (z) zoom = Math.max(minZoom, Math.min(maxZoom, z));
+      Object.keys(tiles).forEach(function (k) { tiles[k].remove(); });
+      tiles = {};
+      draw();
+      onMove(getCentre());
+    }
+
+    function getCentre() {
+      return { lat: centre.lat, lon: centre.lon, zoom: zoom };
+    }
+
+    /* --- Dragging. Pointer events cover mouse and touch in one path. ------- */
+    var dragging = false, lastX = 0, lastY = 0, moved = false;
+
+    container.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".map-controls")) return;
+      dragging = true; moved = false;
+      lastX = e.clientX; lastY = e.clientY;
+      container.setPointerCapture(e.pointerId);
+      container.classList.add("is-dragging");
+    });
+
+    container.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - lastX, dy = e.clientY - lastY;
+      if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+      lastX = e.clientX; lastY = e.clientY;
+
+      var cx = lonToX(centre.lon, zoom) - dx;
+      var cy = latToY(centre.lat, zoom) - dy;
+      cy = Math.max(0, Math.min(worldSize(zoom), cy));
+      centre = { lat: yToLat(cy, zoom), lon: xToLon(cx, zoom) };
+      draw();
+    });
+
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      container.classList.remove("is-dragging");
+      if (e && e.pointerId != null) {
+        try { container.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+      if (moved) onMove(getCentre());
+    }
+    container.addEventListener("pointerup", endDrag);
+    container.addEventListener("pointercancel", endDrag);
+
+    /* Keyboard panning, so this isn't mouse-only. */
+    container.tabIndex = 0;
+    container.setAttribute("role", "application");
+    container.setAttribute("aria-label",
+      "Aerial map. Arrow keys move the map, plus and minus zoom.");
+    container.addEventListener("keydown", function (e) {
+      var step = 40, dx = 0, dy = 0;
+      if (e.key === "ArrowLeft")  dx = step;
+      else if (e.key === "ArrowRight") dx = -step;
+      else if (e.key === "ArrowUp")    dy = step;
+      else if (e.key === "ArrowDown")  dy = -step;
+      else if (e.key === "+" || e.key === "=") { setZoom(zoom + 1); e.preventDefault(); return; }
+      else if (e.key === "-" || e.key === "_") { setZoom(zoom - 1); e.preventDefault(); return; }
+      else return;
+      e.preventDefault();
+      var cx = lonToX(centre.lon, zoom) - dx;
+      var cy = latToY(centre.lat, zoom) - dy;
+      centre = { lat: yToLat(cy, zoom), lon: xToLon(cx, zoom) };
+      draw();
+      onMove(getCentre());
+    });
+
+    window.addEventListener("resize", draw);
+    draw();
+
+    return { setCentre: setCentre, getCentre: getCentre, setZoom: setZoom,
+             redraw: draw, hasFailed: function () { return failed; } };
+  }
+
+  return {
+    create: create,
+    lonToX: lonToX, latToY: latToY, xToLon: xToLon, yToLat: yToLat
+  };
+})();
 
 </script>
 <script>
@@ -1055,12 +1436,32 @@ window.SolarCalc = (function () {
       render: renderBill
     },
     {
+      id: "place",
+      question: "Right, where's home?",
+      why: "Drag the photo so the pin sits on your roof. This is just so we know which sunshine figures to use, and so someone can find you if you want a proper look.",
+      railLabel: "Address",
+      // Show the address if they typed one, otherwise the region we worked
+      // out from the pin, so they can see the tool understood where they are.
+      railValue: v => {
+        if (v.label) return v.label;
+        if (v.positioned) {
+          const r = window.nzRegionFromCoords(v.lat, v.lon);
+          return r ? r.name : "Pin dropped";
+        }
+        return "Not set";
+      },
+      skip: () => !CFG.address.enabled,
+      render: renderPlace
+    },
+    {
       id: "region",
       question: "Where are you in the country?",
       why: "Some parts of New Zealand get a good deal more sun than others, and that changes what the same panels would make on your roof.",
       railLabel: "Region",
       railValue: v => (window.NZ_REGIONS.find(r => r.id === v) || {}).name || v,
-      skip: () => CFG.region.lockToDefault,
+      // The map pin already tells us the region, so do not ask twice.
+      skip: () => CFG.region.lockToDefault ||
+                  (CFG.address.enabled && answers.place && answers.place.positioned),
       render: s => renderOptions(s, window.NZ_REGIONS.map(r => ({ value: r.id, label: r.name })))
     },
     {
@@ -1222,6 +1623,129 @@ window.SolarCalc = (function () {
     step.__panel = list;
     $("panel").querySelector(".question").appendChild(list);
     if (stepIndex > 0) addBack();
+  }
+
+
+  /* --- The map step ---------------------------------------------------------
+     Everything here degrades. No imagery key, a blocked request or a dead
+     service all end in the same place: a plain address box that still gives
+     the installer something useful.
+  ------------------------------------------------------------------------- */
+  function renderPlace(step) {
+    const q = $("panel").querySelector(".question");
+    const cfg = CFG.address;
+    const hasImagery = !!cfg.linzBasemapsKey;
+
+    if (!answers.place) {
+      answers.place = {
+        label: "", lat: cfg.defaultCentre.lat, lon: cfg.defaultCentre.lon,
+        positioned: false
+      };
+    }
+
+    const wrap = el("div", "place");
+
+    /* The typed address. Always present, imagery or not: it is the bit the
+       installer actually reads. */
+    const field = el("div", "field");
+    const lab = el("label", null, "Your street address");
+    lab.htmlFor = "f-address";
+    const input = el("input");
+    input.id = "f-address";
+    input.type = "text";
+    input.autocomplete = "street-address";
+    input.placeholder = "12 Example Road, Napier";
+    input.value = answers.place.label || "";
+    input.addEventListener("input", () => {
+      answers.place.label = input.value.trim();
+      renderRail();
+    });
+    field.appendChild(lab);
+    field.appendChild(input);
+    wrap.appendChild(field);
+
+    let map = null;
+    if (hasImagery) {
+      const mapBox = el("div");
+      wrap.appendChild(mapBox);
+
+      const fallback = el("p", "place-note");
+      fallback.hidden = true;
+      fallback.textContent =
+        "The aerial photos are not loading just now. No bother, the address above is all we need.";
+
+      map = window.SolarMap.create(mapBox, {
+        lat: answers.place.lat,
+        lon: answers.place.lon,
+        zoom: answers.place.positioned ? cfg.roofZoom : cfg.defaultCentre.zoom,
+        tileUrl: cfg.tileUrlTemplate.replace("{key}", cfg.linzBasemapsKey),
+        attribution: cfg.attribution,
+        onMove: c => {
+          answers.place.lat = c.lat;
+          answers.place.lon = c.lon;
+          answers.place.positioned = true;
+          updateRegionFromPin();
+          renderRail();
+        },
+        onUnavailable: () => { mapBox.hidden = true; fallback.hidden = false; }
+      });
+
+      wrap.appendChild(fallback);
+      wrap.appendChild(el("p", "place-note",
+        "Drag the photo to line the pin up with your roof. Close enough is close enough."));
+
+      if (cfg.offerGeolocation && navigator.geolocation) {
+        const locate = el("button", "btn-link", "Use my current location");
+        locate.type = "button";
+        locate.addEventListener("click", () => {
+          locate.textContent = "Finding you\u2026";
+          navigator.geolocation.getCurrentPosition(
+            pos => {
+              map.setCentre(pos.coords.latitude, pos.coords.longitude, cfg.roofZoom);
+              locate.textContent = "Use my current location";
+            },
+            () => {
+              locate.textContent = "Couldn't find you, just type it above instead";
+              locate.disabled = true;
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+          );
+        });
+        wrap.appendChild(locate);
+      }
+    }
+
+    q.appendChild(wrap);
+
+    const actions = el("div", "actions");
+    const next = el("button", "btn btn-primary", "That's the spot");
+    next.type = "button";
+    next.addEventListener("click", advance);
+    actions.appendChild(next);
+
+    if (!cfg.required) {
+      const skip = el("button", "btn-link", "Skip this");
+      skip.type = "button";
+      skip.addEventListener("click", () => { answers.place = null; advance(); });
+      actions.appendChild(skip);
+    }
+    const backBtn = el("button", "btn-link", "Back");
+    backBtn.type = "button";
+    backBtn.addEventListener("click", back);
+    actions.appendChild(backBtn);
+    q.appendChild(actions);
+
+    // Tiles need the container's real size, which it only has once laid out.
+    if (map) requestAnimationFrame(() => { map.redraw(); reportHeight(); });
+  }
+
+  /* If the installer covers more than one region, the pin answers the region
+     question for us and we drop it from the flow. */
+  function updateRegionFromPin() {
+    if (CFG.region.lockToDefault) return;
+    if (!answers.place || !answers.place.positioned) return;
+    const r = window.nzRegionFromCoords(answers.place.lat, answers.place.lon);
+    if (r) answers.region = r.id;
   }
 
   /* --- Bill slider ---------------------------------------------------------- */
@@ -1391,6 +1915,12 @@ window.SolarCalc = (function () {
       email:      answers.contact.email,
       phone:      answers.contact.phone,
       source:     "Solar savings calculator",
+      // Where they live. The installer wants this for quoting and routing,
+      // and it's the single most useful thing the map step buys them.
+      address:      answers.place ? answers.place.label : "",
+      latitude:     answers.place && answers.place.positioned ? answers.place.lat.toFixed(6) : "",
+      longitude:    answers.place && answers.place.positioned ? answers.place.lon.toFixed(6) : "",
+      pin_dropped:  !!(answers.place && answers.place.positioned),
       // Everything the installer needs to pick up the phone already informed.
       monthly_power_bill:   answers.monthlyBill,
       region:               answers.region || CFG.region.default,

@@ -207,6 +207,73 @@ button { font: inherit; color: inherit; }
 .bill-slider { width: 100%; margin: 1.5rem 0 .4rem; accent-color: var(--brand); height: 24px; }
 .bill-scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .72rem; color: var(--ink-3); }
 
+
+/* --- The map step ---------------------------------------------------------
+   The pin sits fixed in the middle and the photo moves underneath it, which
+   is far easier on a phone than dragging a small marker.                   */
+.place { margin-top: 1.6rem; max-width: 34rem; display: flex; flex-direction: column; gap: .9rem; }
+.place .field { max-width: none; }
+
+.map {
+  position: relative;
+  height: clamp(260px, 42vw, 360px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: grab;
+  touch-action: none;          /* we handle the dragging ourselves */
+  user-select: none;
+}
+.map.is-dragging { cursor: grabbing; }
+.map.is-unavailable { display: none; }
+
+.map-surface { position: absolute; inset: 0; }
+.map-tile {
+  position: absolute; top: 0; left: 0;
+  width: 256px; height: 256px;
+  will-change: transform;
+  pointer-events: none;
+}
+.map-tile.is-missing { visibility: hidden; }
+
+/* The pin. Sits dead centre, with a shadow so it reads against dark roofs
+   and light driveways alike. */
+.map-pin {
+  position: absolute; left: 50%; top: 50%;
+  width: 26px; height: 26px; margin: -30px 0 0 -13px;
+  pointer-events: none;
+  background: var(--brand);
+  border: 2.5px solid #FFFFFF;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,.45);
+}
+.map-pin::after {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: 7px; height: 7px; border-radius: 50%; background: #FFFFFF;
+}
+
+.map-controls { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; }
+.map-controls button {
+  width: 32px; height: 32px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+  border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.map-controls button:hover { border-color: var(--ink-3); }
+
+.map-credit {
+  position: absolute; right: 0; bottom: 0;
+  font-size: .62rem; padding: .2rem .45rem;
+  background: rgba(255,255,255,.82); color: #2B2B2B;
+  border-top-left-radius: 5px; pointer-events: none;
+}
+
+.place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }
+/* Flex column would otherwise stretch these full width. */
+.place > .btn-link { align-self: flex-start; }
+
 /* --- Buttons -------------------------------------------------------------- */
 .actions { display: flex; align-items: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
 .btn {

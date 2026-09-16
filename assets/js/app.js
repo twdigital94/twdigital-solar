@@ -136,12 +136,32 @@
       render: renderBill
     },
     {
+      id: "place",
+      question: "Right, where's home?",
+      why: "Drag the photo so the pin sits on your roof. This is just so we know which sunshine figures to use, and so someone can find you if you want a proper look.",
+      railLabel: "Address",
+      // Show the address if they typed one, otherwise the region we worked
+      // out from the pin, so they can see the tool understood where they are.
+      railValue: v => {
+        if (v.label) return v.label;
+        if (v.positioned) {
+          const r = window.nzRegionFromCoords(v.lat, v.lon);
+          return r ? r.name : "Pin dropped";
+        }
+        return "Not set";
+      },
+      skip: () => !CFG.address.enabled,
+      render: renderPlace
+    },
+    {
       id: "region",
       question: "Where are you in the country?",
       why: "Some parts of New Zealand get a good deal more sun than others, and that changes what the same panels would make on your roof.",
       railLabel: "Region",
       railValue: v => (window.NZ_REGIONS.find(r => r.id === v) || {}).name || v,
-      skip: () => CFG.region.lockToDefault,
+      // The map pin already tells us the region, so do not ask twice.
+      skip: () => CFG.region.lockToDefault ||
+                  (CFG.address.enabled && answers.place && answers.place.positioned),
       render: s => renderOptions(s, window.NZ_REGIONS.map(r => ({ value: r.id, label: r.name })))
     },
     {
@@ -303,6 +323,129 @@
     step.__panel = list;
     $("panel").querySelector(".question").appendChild(list);
     if (stepIndex > 0) addBack();
+  }
+
+
+  /* --- The map step ---------------------------------------------------------
+     Everything here degrades. No imagery key, a blocked request or a dead
+     service all end in the same place: a plain address box that still gives
+     the installer something useful.
+  ------------------------------------------------------------------------- */
+  function renderPlace(step) {
+    const q = $("panel").querySelector(".question");
+    const cfg = CFG.address;
+    const hasImagery = !!cfg.linzBasemapsKey;
+
+    if (!answers.place) {
+      answers.place = {
+        label: "", lat: cfg.defaultCentre.lat, lon: cfg.defaultCentre.lon,
+        positioned: false
+      };
+    }
+
+    const wrap = el("div", "place");
+
+    /* The typed address. Always present, imagery or not: it is the bit the
+       installer actually reads. */
+    const field = el("div", "field");
+    const lab = el("label", null, "Your street address");
+    lab.htmlFor = "f-address";
+    const input = el("input");
+    input.id = "f-address";
+    input.type = "text";
+    input.autocomplete = "street-address";
+    input.placeholder = "12 Example Road, Napier";
+    input.value = answers.place.label || "";
+    input.addEventListener("input", () => {
+      answers.place.label = input.value.trim();
+      renderRail();
+    });
+    field.appendChild(lab);
+    field.appendChild(input);
+    wrap.appendChild(field);
+
+    let map = null;
+    if (hasImagery) {
+      const mapBox = el("div");
+      wrap.appendChild(mapBox);
+
+      const fallback = el("p", "place-note");
+      fallback.hidden = true;
+      fallback.textContent =
+        "The aerial photos are not loading just now. No bother, the address above is all we need.";
+
+      map = window.SolarMap.create(mapBox, {
+        lat: answers.place.lat,
+        lon: answers.place.lon,
+        zoom: answers.place.positioned ? cfg.roofZoom : cfg.defaultCentre.zoom,
+        tileUrl: cfg.tileUrlTemplate.replace("{key}", cfg.linzBasemapsKey),
+        attribution: cfg.attribution,
+        onMove: c => {
+          answers.place.lat = c.lat;
+          answers.place.lon = c.lon;
+          answers.place.positioned = true;
+          updateRegionFromPin();
+          renderRail();
+        },
+        onUnavailable: () => { mapBox.hidden = true; fallback.hidden = false; }
+      });
+
+      wrap.appendChild(fallback);
+      wrap.appendChild(el("p", "place-note",
+        "Drag the photo to line the pin up with your roof. Close enough is close enough."));
+
+      if (cfg.offerGeolocation && navigator.geolocation) {
+        const locate = el("button", "btn-link", "Use my current location");
+        locate.type = "button";
+        locate.addEventListener("click", () => {
+          locate.textContent = "Finding you\u2026";
+          navigator.geolocation.getCurrentPosition(
+            pos => {
+              map.setCentre(pos.coords.latitude, pos.coords.longitude, cfg.roofZoom);
+              locate.textContent = "Use my current location";
+            },
+            () => {
+              locate.textContent = "Couldn't find you, just type it above instead";
+              locate.disabled = true;
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+          );
+        });
+        wrap.appendChild(locate);
+      }
+    }
+
+    q.appendChild(wrap);
+
+    const actions = el("div", "actions");
+    const next = el("button", "btn btn-primary", "That's the spot");
+    next.type = "button";
+    next.addEventListener("click", advance);
+    actions.appendChild(next);
+
+    if (!cfg.required) {
+      const skip = el("button", "btn-link", "Skip this");
+      skip.type = "button";
+      skip.addEventListener("click", () => { answers.place = null; advance(); });
+      actions.appendChild(skip);
+    }
+    const backBtn = el("button", "btn-link", "Back");
+    backBtn.type = "button";
+    backBtn.addEventListener("click", back);
+    actions.appendChild(backBtn);
+    q.appendChild(actions);
+
+    // Tiles need the container's real size, which it only has once laid out.
+    if (map) requestAnimationFrame(() => { map.redraw(); reportHeight(); });
+  }
+
+  /* If the installer covers more than one region, the pin answers the region
+     question for us and we drop it from the flow. */
+  function updateRegionFromPin() {
+    if (CFG.region.lockToDefault) return;
+    if (!answers.place || !answers.place.positioned) return;
+    const r = window.nzRegionFromCoords(answers.place.lat, answers.place.lon);
+    if (r) answers.region = r.id;
   }
 
   /* --- Bill slider ---------------------------------------------------------- */
@@ -472,6 +615,12 @@
       email:      answers.contact.email,
       phone:      answers.contact.phone,
       source:     "Solar savings calculator",
+      // Where they live. The installer wants this for quoting and routing,
+      // and it's the single most useful thing the map step buys them.
+      address:      answers.place ? answers.place.label : "",
+      latitude:     answers.place && answers.place.positioned ? answers.place.lat.toFixed(6) : "",
+      longitude:    answers.place && answers.place.positioned ? answers.place.lon.toFixed(6) : "",
+      pin_dropped:  !!(answers.place && answers.place.positioned),
       // Everything the installer needs to pick up the phone already informed.
       monthly_power_bill:   answers.monthlyBill,
       region:               answers.region || CFG.region.default,

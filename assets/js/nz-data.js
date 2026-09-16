@@ -14,21 +14,59 @@
    Send me your table and this becomes a 2-minute fix.
 --------------------------------------------------------------------------- */
 window.NZ_REGIONS = [
-  { id: "northland",     name: "Northland",           yield: 1270 },
-  { id: "auckland",      name: "Auckland",            yield: 1290 },
-  { id: "waikato",       name: "Waikato / Hamilton",  yield: 1230 },
-  { id: "bay-of-plenty", name: "Bay of Plenty",       yield: 1280 },
-  { id: "gisborne",      name: "Gisborne",            yield: 1275 },
-  { id: "hawkes-bay",    name: "Hawke's Bay",         yield: 1285 },
-  { id: "taranaki",      name: "Taranaki",            yield: 1320 },
-  { id: "manawatu",      name: "Manawatū / Whanganui",yield: 1240 },
-  { id: "wellington",    name: "Wellington",          yield: 1340 },
-  { id: "nelson",        name: "Nelson",              yield: 1300 },
-  { id: "marlborough",   name: "Marlborough",         yield: 1310 },
-  { id: "canterbury",    name: "Canterbury",          yield: 1250 },
-  { id: "otago",         name: "Otago",               yield: 1210 },
-  { id: "southland",     name: "Southland",           yield: 1120 }
+  { id: "northland",     name: "Northland",           yield: 1270,
+    points: [[-35.72, 174.32], [-35.11, 173.26]] },
+  { id: "auckland",      name: "Auckland",            yield: 1290,
+    points: [[-36.85, 174.76], [-37.21, 174.90]] },
+  { id: "waikato",       name: "Waikato / Hamilton",  yield: 1230,
+    points: [[-37.79, 175.28], [-38.69, 176.07], [-37.65, 175.16]] },
+  { id: "bay-of-plenty", name: "Bay of Plenty",       yield: 1280,
+    points: [[-37.69, 176.17], [-38.14, 176.25]] },
+  { id: "gisborne",      name: "Gisborne",            yield: 1275,
+    points: [[-38.66, 178.02]] },
+  { id: "hawkes-bay",    name: "Hawke's Bay",         yield: 1285,
+    points: [[-39.49, 176.91], [-39.64, 176.85]] },
+  { id: "taranaki",      name: "Taranaki",            yield: 1320,
+    points: [[-39.06, 174.08], [-39.50, 174.28]] },
+  { id: "manawatu",      name: "Manawat\u016b / Whanganui", yield: 1240,
+    points: [[-40.35, 175.61], [-39.93, 175.05], [-40.75, 175.15]] },
+  { id: "wellington",    name: "Wellington",          yield: 1340,
+    points: [[-41.29, 174.78], [-41.13, 175.07], [-40.95, 175.66]] },
+  { id: "nelson",        name: "Nelson",              yield: 1300,
+    points: [[-41.27, 173.28], [-41.50, 172.83]] },
+  { id: "marlborough",   name: "Marlborough",         yield: 1310,
+    points: [[-41.51, 173.95]] },
+  { id: "canterbury",    name: "Canterbury",          yield: 1250,
+    points: [[-43.53, 172.63], [-44.40, 171.25], [-42.40, 173.68], [-43.90, 170.47]] },
+  { id: "otago",         name: "Otago",               yield: 1210,
+    points: [[-45.87, 170.50], [-45.03, 168.66], [-44.70, 169.14], [-45.10, 170.97]] },
+  { id: "southland",     name: "Southland",           yield: 1120,
+    points: [[-46.41, 168.35], [-46.10, 168.94], [-45.42, 167.72]] }
 ];
+
+/* Work out which region a dropped map pin sits in, by finding the nearest
+   listed town. Several regions need more than one point: nearest-to-Dunedin
+   would put Queenstown in Southland, which is both wrong and a worse
+   sunshine figure. Still crude near a boundary, but it only picks a sunshine
+   number, and neighbouring regions have similar ones. Saving the question is
+   worth more than the last few percent of precision.
+   Only used when the map step is on and the installer covers more than one
+   region. */
+window.nzRegionFromCoords = function (lat, lon) {
+  var best = null, bestDist = Infinity;
+  window.NZ_REGIONS.forEach(function (r) {
+    r.points.forEach(function (pt) {
+      // Flat approximation, corrected for longitude converging toward the
+      // pole. Plenty accurate over a country this size and far cheaper than
+      // a proper great-circle distance.
+      var dLat = pt[0] - lat;
+      var dLon = (pt[1] - lon) * Math.cos(lat * Math.PI / 180);
+      var d = dLat * dLat + dLon * dLon;
+      if (d < bestDist) { bestDist = d; best = r; }
+    });
+  });
+  return best;
+};
 
 /* --- INSTALLED PRICING (incl. GST), 2026 NZ rates -------------------------
    Straight from your brief. If an installer gives you their own pricing,

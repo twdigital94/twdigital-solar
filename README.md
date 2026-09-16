@@ -94,6 +94,51 @@ their place.
 
 ---
 
+## The map step
+
+Shows the homeowner an aerial photo of their place and asks them to drag it so
+the pin sits on their roof. Off by default until you give it a key.
+
+**To turn it on**, get a free LINZ Basemaps key from
+<https://basemaps.linz.govt.nz>, then paste it into `address.linzBasemapsKey`
+in `config.js`. Also set `address.defaultCentre` to the middle of that
+installer's patch, so the map opens somewhere useful.
+
+**Be clear about what it does and doesn't do.** It does not make the estimate
+more accurate. The power bill drives system size far more than the roof does.
+What it buys you is:
+
+- **Engagement.** Seeing your own house from above is the moment the tool stops
+  feeling like a form.
+- **An address and coordinates on every lead.** The installer gets these in the
+  webhook payload for quoting and routing, which is worth real money to them.
+- **One fewer question**, for installers covering more than one region. The pin
+  tells us the region, so that question drops out of the flow automatically.
+  Installers locked to a single region never saw it anyway.
+
+**It can't break the flow.** No key means a plain address box and no map. A key
+that's wrong, or LINZ being down, means the map quietly hides itself and shows
+a short note instead. There's a "Skip this" link either way. An address is
+nice to have and is never worth losing a lead over, which is why
+`address.required` defaults to false and should stay there.
+
+**No mapping library.** The map is about 200 lines in `assets/js/map.js` with
+no dependencies, so there's no CDN to go down and nothing to keep updated.
+
+### What this deliberately does not do
+
+Solar Scout follow their map with a LiDAR roof scan: three roof faces, pitch,
+points per square metre. The raw data behind that is free and public, but
+turning a point cloud into roof planes needs server-side processing, which
+would break the "drag a folder onto Netlify" model that makes this re-skinnable
+at all. It also wouldn't improve the estimate much, for the reason above.
+
+Solar Scout need it because the report *is* their product, which they sell on
+to installers. Here the product is a lead for an installer who is going to get
+up on the roof anyway.
+
+---
+
 ## Where the leads go
 
 Set `leads.webhookUrl` in `config.js` to the installer's GoHighLevel **Inbound
@@ -117,6 +162,7 @@ the payload to the browser console instead.
 | `assets/js/nz-data.js` | Shared NZ data: regional solar yield, install pricing, bank green loans, consent rules. Edit when the country changes, not when the client does. |
 | `assets/js/calculator.js` | The maths. Pure calculation, no page code. |
 | `assets/js/app.js` | The question flow and the results page. |
+| `assets/js/map.js` | The aerial map. No libraries, no CDN. |
 | `assets/css/styles.css` | All styling. Re-skins from the brand colour in config, so you shouldn't need to touch this. |
 | `embed/ghl-snippet.html` | Paste into GoHighLevel. |
 | `build.js` | Bundles everything into one file (`node build.js`). |
@@ -171,3 +217,9 @@ These were deliberate, and are worth not breaking:
 - Solar Colab's brand colours are eyeballed from a screenshot of their site.
   If they have a brand guide with exact hex codes, those should replace them.
 - No battery option yet. Worth adding once v1 is proven.
+- The map step has only been tested against a stand-in tile server, because
+  LINZ was unreachable from the build environment. Get a key and click
+  through it before putting it in front of paid traffic.
+- Region detection from the pin uses nearest-town, checked against 27 NZ
+  towns. It could still pick the neighbouring region right on a boundary,
+  which would shift the sunshine figure slightly.
