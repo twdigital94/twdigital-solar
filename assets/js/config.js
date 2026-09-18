@@ -117,19 +117,51 @@ window.SOLAR_CONFIG = {
     search: {
       provider: "linz",          // "linz", "google" or "off"
 
-      linzDataKey: "",           // data.linz.govt.nz, not basemaps.linz.govt.nz
+      // From data.linz.govt.nz. This is a DIFFERENT key from the Basemaps
+      // imagery one above, from a different LINZ service. Easy to mix up.
+      linzDataKey: "",
       linzLayerId: "105689",     // NZ Street Address
-      linzUrlTemplate:
+
+      /* Their exact query format could not be confirmed when this was built,
+         so the calculator tries these in order on the first search and keeps
+         whichever works. If LINZ tell you the right one, delete the rest. */
+      linzUrlTemplates: [
+        // WFS 2.0, ASCII address field
         "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
         "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
         "&count={count}&srsName=EPSG:4326" +
-        "&cql_filter=full_address_ascii%20ILIKE%20%27{query}%25%27",
+        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27",
+
+        // WFS 2.0, plain address field
+        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
+        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
+        "&count={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address+ILIKE+%27{query}%25%27",
+
+        // WFS 1.1, which uses typeName and maxFeatures rather than typeNames
+        // and count
+        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=1.1.0" +
+        "&request=GetFeature&typeName=layer-{layer}&outputFormat=application/json" +
+        "&maxFeatures={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27",
+
+        // Key as a query parameter rather than in the path
+        "https://data.linz.govt.nz/services/wfs?key={key}&service=WFS&version=2.0.0" +
+        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
+        "&count={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27"
+      ],
 
       googleApiKey: "",
 
       minCharacters: 4,
       maxResults: 6,
-      debounceMs: 250
+      debounceMs: 250,
+
+      /* Shows a short line under the address box saying whether suggestions
+         are working and, if not, why. Useful while setting a client up.
+         Turn this off before the page goes in front of real traffic. */
+      debug: true
     },
 
     // Make them position the pin before continuing. Leave false. An address

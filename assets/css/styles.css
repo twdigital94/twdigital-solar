@@ -292,6 +292,8 @@ button { font: inherit; color: inherit; }
 .suggest-item[aria-selected="true"] { background: var(--brand-wash); }
 
 .place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }
+/* Setup-time only, switched off in config before launch. */
+.place-status { margin-top: .4rem; font-family: var(--mono); font-size: .72rem; color: var(--ink-3); }
 /* Flex column would otherwise stretch these full width. */
 .place > .btn-link { align-self: flex-start; }
 

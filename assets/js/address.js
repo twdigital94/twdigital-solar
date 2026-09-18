@@ -28,32 +28,106 @@ window.SolarAddress = (function () {
 
   /* LINZ Data Service. Queries the national street address layer.
      Needs a key from data.linz.govt.nz, which is NOT the same key as the
-     Basemaps imagery one. */
+     Basemaps imagery one.
+
+     Their exact query format could not be confirmed when this was written, so
+     rather than betting on one guess it tries each candidate in turn on the
+     first search, keeps whichever returns addresses, and uses only that one
+     from then on. If none work it records why, which is far more useful than
+     an empty list. */
   providers.linz = function (cfg) {
-    return function (query) {
-      var safe = query.replace(/'/g, "''");
-      var url = cfg.linzUrlTemplate
+    var chosen = null;      // the template that worked
+    var probing = null;     // the in-flight probe, so parallel keystrokes share it
+
+    function urlFor(tpl, query) {
+      return tpl
         .replace("{key}", encodeURIComponent(cfg.linzDataKey))
         .replace("{layer}", encodeURIComponent(cfg.linzLayerId))
         .replace("{count}", String(cfg.maxResults))
-        .replace("{query}", encodeURIComponent(safe));
+        .replace(/\{query\}/g, encodeURIComponent(query.replace(/'/g, "''")));
+    }
 
-      return fetch(url).then(function (r) {
-        if (!r.ok) throw new Error("LINZ address search: HTTP " + r.status);
-        return r.json();
-      }).then(function (data) {
-        return (data.features || []).map(function (f) {
-          var p = f.properties || {};
-          var c = (f.geometry && f.geometry.coordinates) || [];
-          return {
-            label: p.full_address || p.full_address_ascii || p.address || "",
-            lon: c[0], lat: c[1]
-          };
-        }).filter(function (s) {
-          return s.label && typeof s.lat === "number" && typeof s.lon === "number";
-        });
+    function parse(data) {
+      return (data.features || []).map(function (f) {
+        var p = f.properties || {};
+        var c = (f.geometry && f.geometry.coordinates) || [];
+        return {
+          label: p.full_address || p.full_address_ascii || p.address ||
+                 p.address_label || "",
+          lon: c[0], lat: c[1]
+        };
+      }).filter(function (s) {
+        return s.label && typeof s.lat === "number" && typeof s.lon === "number";
       });
+    }
+
+    /* Resolves to { results } on success, or { why } describing the failure.
+       Never rejects: a failed candidate is data, not an error. */
+    function tryTemplate(tpl, query) {
+      return fetch(urlFor(tpl, query)).then(function (r) {
+        if (!r.ok) return { why: "HTTP " + r.status };
+        return r.json().then(function (data) {
+          var results = parse(data);
+          return results.length ? { results: results } : { why: "no matches" };
+        }).catch(function () {
+          return { why: "reply was not the JSON we expected" };
+        });
+      }).catch(function (e) {
+        // fetch only rejects on a network-level failure, which for a browser
+        // calling another domain almost always means the service did not
+        // allow the request at all.
+        return { why: "blocked before it reached LINZ (" + e.message + ")" };
+      });
+    }
+
+    function candidates() {
+      return (cfg.linzUrlTemplates && cfg.linzUrlTemplates.length)
+        ? cfg.linzUrlTemplates
+        : [cfg.linzUrlTemplate];
+    }
+
+    return function (query) {
+      if (!cfg.linzDataKey) {
+        report("No data.linz.govt.nz key set, so suggestions are off.");
+        return Promise.resolve([]);
+      }
+
+      if (chosen) {
+        return tryTemplate(chosen, query).then(function (r) {
+          return r.results || [];
+        });
+      }
+
+      if (!probing) {
+        var list = candidates();
+        var notes = [];
+        probing = list.reduce(function (chain, tpl, i) {
+          return chain.then(function (found) {
+            if (found) return found;
+            return tryTemplate(tpl, query).then(function (r) {
+              if (r.results) { chosen = tpl; return r.results; }
+              notes.push("Format " + (i + 1) + ": " + r.why);
+              return null;
+            });
+          });
+        }, Promise.resolve(null)).then(function (found) {
+          probing = null;
+          if (found) {
+            report("Address search working. Using format " +
+                   (list.indexOf(chosen) + 1) + " of " + list.length + ".");
+            return found;
+          }
+          report("Address search found nothing. " + notes.join("; ") + ".");
+          return [];
+        });
+      }
+      return probing;
     };
+
+    function report(message) {
+      if (cfg.onStatus) cfg.onStatus(message);
+      console.log("[calculator] " + message);
+    }
   };
 
   /* Google Places. Loads their script once, then asks for predictions and

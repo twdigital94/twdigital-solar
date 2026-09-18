@@ -452,6 +452,20 @@
 
     /* Suggestions, once the map exists so a pick can move it. */
     if (searchCfg.provider && searchCfg.provider !== "off" && window.SolarAddress) {
+      /* While setting a client up it helps to see whether address search is
+         actually working. Switched off in config before real traffic. */
+      let status = null;
+      if (searchCfg.debug) {
+        status = el("p", "place-note place-status");
+        status.hidden = true;
+        field.appendChild(status);
+        searchCfg.onStatus = message => {
+          status.textContent = message;
+          status.hidden = false;
+          reportHeight();
+        };
+      }
+
       window.SolarAddress.attach(input, {
         config: searchCfg,
         onResize: reportHeight,

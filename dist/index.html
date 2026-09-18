@@ -130,19 +130,51 @@ window.SOLAR_CONFIG = {
     search: {
       provider: "linz",          // "linz", "google" or "off"
 
-      linzDataKey: "",           // data.linz.govt.nz, not basemaps.linz.govt.nz
+      // From data.linz.govt.nz. This is a DIFFERENT key from the Basemaps
+      // imagery one above, from a different LINZ service. Easy to mix up.
+      linzDataKey: "",
       linzLayerId: "105689",     // NZ Street Address
-      linzUrlTemplate:
+
+      /* Their exact query format could not be confirmed when this was built,
+         so the calculator tries these in order on the first search and keeps
+         whichever works. If LINZ tell you the right one, delete the rest. */
+      linzUrlTemplates: [
+        // WFS 2.0, ASCII address field
         "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
         "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
         "&count={count}&srsName=EPSG:4326" +
-        "&cql_filter=full_address_ascii%20ILIKE%20%27{query}%25%27",
+        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27",
+
+        // WFS 2.0, plain address field
+        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
+        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
+        "&count={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address+ILIKE+%27{query}%25%27",
+
+        // WFS 1.1, which uses typeName and maxFeatures rather than typeNames
+        // and count
+        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=1.1.0" +
+        "&request=GetFeature&typeName=layer-{layer}&outputFormat=application/json" +
+        "&maxFeatures={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27",
+
+        // Key as a query parameter rather than in the path
+        "https://data.linz.govt.nz/services/wfs?key={key}&service=WFS&version=2.0.0" +
+        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
+        "&count={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27"
+      ],
 
       googleApiKey: "",
 
       minCharacters: 4,
       maxResults: 6,
-      debounceMs: 250
+      debounceMs: 250,
+
+      /* Shows a short line under the address box saying whether suggestions
+         are working and, if not, why. Useful while setting a client up.
+         Turn this off before the page goes in front of real traffic. */
+      debug: true
     },
 
     // Make them position the pin before continuing. Leave false. An address
@@ -598,6 +630,8 @@ button { font: inherit; color: inherit; }
 .suggest-item[aria-selected="true"] { background: var(--brand-wash); }
 
 .place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }
+/* Setup-time only, switched off in config before launch. */
+.place-status { margin-top: .4rem; font-family: var(--mono); font-size: .72rem; color: var(--ink-3); }
 /* Flex column would otherwise stretch these full width. */
 .place > .btn-link { align-self: flex-start; }
 
@@ -1146,32 +1180,106 @@ window.SolarAddress = (function () {
 
   /* LINZ Data Service. Queries the national street address layer.
      Needs a key from data.linz.govt.nz, which is NOT the same key as the
-     Basemaps imagery one. */
+     Basemaps imagery one.
+
+     Their exact query format could not be confirmed when this was written, so
+     rather than betting on one guess it tries each candidate in turn on the
+     first search, keeps whichever returns addresses, and uses only that one
+     from then on. If none work it records why, which is far more useful than
+     an empty list. */
   providers.linz = function (cfg) {
-    return function (query) {
-      var safe = query.replace(/'/g, "''");
-      var url = cfg.linzUrlTemplate
+    var chosen = null;      // the template that worked
+    var probing = null;     // the in-flight probe, so parallel keystrokes share it
+
+    function urlFor(tpl, query) {
+      return tpl
         .replace("{key}", encodeURIComponent(cfg.linzDataKey))
         .replace("{layer}", encodeURIComponent(cfg.linzLayerId))
         .replace("{count}", String(cfg.maxResults))
-        .replace("{query}", encodeURIComponent(safe));
+        .replace(/\{query\}/g, encodeURIComponent(query.replace(/'/g, "''")));
+    }
 
-      return fetch(url).then(function (r) {
-        if (!r.ok) throw new Error("LINZ address search: HTTP " + r.status);
-        return r.json();
-      }).then(function (data) {
-        return (data.features || []).map(function (f) {
-          var p = f.properties || {};
-          var c = (f.geometry && f.geometry.coordinates) || [];
-          return {
-            label: p.full_address || p.full_address_ascii || p.address || "",
-            lon: c[0], lat: c[1]
-          };
-        }).filter(function (s) {
-          return s.label && typeof s.lat === "number" && typeof s.lon === "number";
-        });
+    function parse(data) {
+      return (data.features || []).map(function (f) {
+        var p = f.properties || {};
+        var c = (f.geometry && f.geometry.coordinates) || [];
+        return {
+          label: p.full_address || p.full_address_ascii || p.address ||
+                 p.address_label || "",
+          lon: c[0], lat: c[1]
+        };
+      }).filter(function (s) {
+        return s.label && typeof s.lat === "number" && typeof s.lon === "number";
       });
+    }
+
+    /* Resolves to { results } on success, or { why } describing the failure.
+       Never rejects: a failed candidate is data, not an error. */
+    function tryTemplate(tpl, query) {
+      return fetch(urlFor(tpl, query)).then(function (r) {
+        if (!r.ok) return { why: "HTTP " + r.status };
+        return r.json().then(function (data) {
+          var results = parse(data);
+          return results.length ? { results: results } : { why: "no matches" };
+        }).catch(function () {
+          return { why: "reply was not the JSON we expected" };
+        });
+      }).catch(function (e) {
+        // fetch only rejects on a network-level failure, which for a browser
+        // calling another domain almost always means the service did not
+        // allow the request at all.
+        return { why: "blocked before it reached LINZ (" + e.message + ")" };
+      });
+    }
+
+    function candidates() {
+      return (cfg.linzUrlTemplates && cfg.linzUrlTemplates.length)
+        ? cfg.linzUrlTemplates
+        : [cfg.linzUrlTemplate];
+    }
+
+    return function (query) {
+      if (!cfg.linzDataKey) {
+        report("No data.linz.govt.nz key set, so suggestions are off.");
+        return Promise.resolve([]);
+      }
+
+      if (chosen) {
+        return tryTemplate(chosen, query).then(function (r) {
+          return r.results || [];
+        });
+      }
+
+      if (!probing) {
+        var list = candidates();
+        var notes = [];
+        probing = list.reduce(function (chain, tpl, i) {
+          return chain.then(function (found) {
+            if (found) return found;
+            return tryTemplate(tpl, query).then(function (r) {
+              if (r.results) { chosen = tpl; return r.results; }
+              notes.push("Format " + (i + 1) + ": " + r.why);
+              return null;
+            });
+          });
+        }, Promise.resolve(null)).then(function (found) {
+          probing = null;
+          if (found) {
+            report("Address search working. Using format " +
+                   (list.indexOf(chosen) + 1) + " of " + list.length + ".");
+            return found;
+          }
+          report("Address search found nothing. " + notes.join("; ") + ".");
+          return [];
+        });
+      }
+      return probing;
     };
+
+    function report(message) {
+      if (cfg.onStatus) cfg.onStatus(message);
+      console.log("[calculator] " + message);
+    }
   };
 
   /* Google Places. Loads their script once, then asks for predictions and
@@ -2056,6 +2164,20 @@ window.SolarCalc = (function () {
 
     /* Suggestions, once the map exists so a pick can move it. */
     if (searchCfg.provider && searchCfg.provider !== "off" && window.SolarAddress) {
+      /* While setting a client up it helps to see whether address search is
+         actually working. Switched off in config before real traffic. */
+      let status = null;
+      if (searchCfg.debug) {
+        status = el("p", "place-note place-status");
+        status.hidden = true;
+        field.appendChild(status);
+        searchCfg.onStatus = message => {
+          status.textContent = message;
+          status.hidden = false;
+          reportHeight();
+        };
+      }
+
       window.SolarAddress.attach(input, {
         config: searchCfg,
         onResize: reportHeight,

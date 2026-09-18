@@ -115,7 +115,7 @@ before it goes live. An individual key is fine for clicking through it yourself.
 pass the key in at build time instead:
 
 ```
-LINZ_KEY=your-key-here OUT=preview.html node build.js
+LINZ_KEY=imagery-key LINZ_DATA_KEY=address-key OUT=preview.html node build.js
 ```
 
 That writes a single file with the key baked in, which you can open directly in
@@ -154,6 +154,10 @@ Two providers, because they trade off differently:
 - **`linz`** is free and New Zealand only, which suits the audience exactly. It
   needs a key from <https://data.linz.govt.nz>. That is a **different key** from
   the Basemaps imagery one, from a different LINZ service. Easy to conflate.
+  Their exact query format could not be confirmed when this was built, so
+  `linzUrlTemplates` holds several candidates. The calculator tries each on the
+  first search and keeps whichever returns addresses. Once you know which one
+  works, delete the others.
 - **`google`** costs a few dollars per thousand lookups but copes far better
   with half-typed, misspelled and informal addresses. On paid traffic that
   usually pays for itself, since every abandoned address box is a lost lead.
@@ -262,9 +266,9 @@ These were deliberate, and are worth not breaking:
   If they have a brand guide with exact hex codes, those should replace them.
 - No battery option yet. Worth adding once v1 is proven.
 - Address suggestions have only been tested against a stand-in service, since
-  LINZ is unreachable from the build environment. The LINZ query URL in
-  `config.js` is a best guess at their WFS format and may need correcting
-  against the real service.
+  LINZ is unreachable from the build environment.
+- `address.search.debug` is on, which shows a status line under the address
+  box. Turn it off before real traffic.
 - A LINZ Developer API key needs requesting before launch. See above.
 - Region detection from the pin uses nearest-town, checked against 27 NZ
   towns. It could still pick the neighbouring region right on a boundary,
