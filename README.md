@@ -29,15 +29,21 @@ file once and redeploy each site. Nothing in GoHighLevel needs touching.
 
 In the funnel or website builder, drop a **Custom JS/HTML** element on the page,
 then paste in everything from `embed/ghl-snippet.html`. Change the iframe `src`
-to your Netlify URL. Done.
+to your Netlify URL. Done. The same snippet works on WordPress, Squarespace,
+Wix, Webflow or a plain HTML page.
 
-The snippet handles the two things that otherwise go wrong with an iframe:
+The snippet handles the three things that otherwise go wrong with an iframe:
 
 - **Height.** The calculator tells the parent page how tall it is at each step,
   so the iframe resizes instead of showing an inner scrollbar.
 - **Conversion tracking.** When someone submits, the calculator tells the parent
   page, so the GoHighLevel page's own Meta Pixel and Google tag fire the Lead
   event as well as the pixel inside the calculator.
+- **Location permission.** `allow="geolocation"` on the iframe is not optional.
+  A browser will not hand a page's location to an embedded frame unless the
+  hosting page says so, and without it the "use my current location" button
+  silently does nothing. Verified across real origins: with the attribute the
+  map jumps to the roof, without it the map never moves.
 
 **Alternative, no iframe.** Run `node build.js` to produce `dist/index.html`,
 a single self-contained file. Paste its entire contents into the GHL custom-code

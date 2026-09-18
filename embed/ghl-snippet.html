@@ -1,10 +1,18 @@
 <!-- ===========================================================================
-     PASTE THIS INTO GOHIGHLEVEL
+     THE SOLAR CALCULATOR, EMBEDDED
 
-     In the funnel/website builder: add a "Custom JS/HTML" element where you
-     want the calculator, click into it, and paste everything below.
+     Works in GoHighLevel, WordPress, Squarespace, Wix, Webflow or a plain HTML
+     page. Anywhere you can paste HTML.
 
-     Change ONE thing: the src URL on the iframe -> your Netlify address.
+     CHANGE ONE THING: the src below, to your own Netlify address.
+
+     GoHighLevel:  in the funnel or website builder, drag in a "Custom JS/HTML"
+                   element, click into it, paste all of this.
+     WordPress:    add a "Custom HTML" block. Not a "Paragraph" block, that
+                   will show the code as text instead of running it.
+     Squarespace:  add a "Code" block.
+     Wix:          Embed > Embed HTML > Code.
+     Plain site:   paste it wherever you want the calculator to appear.
      =========================================================================== -->
 
 <div id="solar-calc-wrap" style="max-width:1180px;margin:0 auto;">
@@ -13,19 +21,28 @@
     src="https://YOUR-SITE.netlify.app/"
     title="Solar savings calculator"
     scrolling="no"
-    style="width:100%;height:760px;border:0;display:block;overflow:hidden;"
-    loading="lazy"></iframe>
+    loading="lazy"
+    allow="geolocation"
+    style="width:100%;height:780px;border:0;display:block;overflow:hidden;"></iframe>
 </div>
 
 <script>
 (function () {
   var frame = document.getElementById("solar-calc");
+  var wrap  = document.getElementById("solar-calc-wrap");
+  if (!frame) return;
+
+  // Only listen to messages coming from the calculator itself.
+  var allowed = (function () {
+    try { return new URL(frame.src).origin; } catch (e) { return null; }
+  })();
 
   window.addEventListener("message", function (e) {
+    if (allowed && e.origin !== allowed) return;
     if (!e.data || typeof e.data !== "object") return;
 
-    // The calculator tells us how tall it is at each step, so the iframe grows
-    // and shrinks with it instead of showing an inner scrollbar.
+    // The calculator reports its height at each step, so the iframe grows and
+    // shrinks with it rather than showing a scrollbar inside a scrollbar.
     if (e.data.type === "solar-calculator:height" && e.data.height) {
       frame.style.height = (e.data.height + 24) + "px";
     }
@@ -36,11 +53,27 @@
       if (window.fbq)  window.fbq("track", "Lead", { value: e.data.value, currency: "NZD" });
       if (window.gtag) window.gtag("event", "generate_lead", { value: e.data.value, currency: "NZD" });
 
-      // Scroll the results into view. On mobile the iframe has just got much
-      // taller and the reader would otherwise be left staring at the middle.
-      var top = document.getElementById("solar-calc-wrap").getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({ top: top - 20, behavior: "smooth" });
+      // The iframe has just got much taller. Without this, someone on a phone
+      // is left staring at the middle of their results.
+      var top = wrap.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({ top: Math.max(top - 20, 0), behavior: "smooth" });
     }
   });
 })();
 </script>
+
+<!-- ---------------------------------------------------------------------------
+     NOTES
+
+     allow="geolocation" on the iframe is not optional. Without it the "use my
+     current location" button silently does nothing, because a browser will not
+     hand a page's location to an embedded frame unless the page hosting it
+     says so.
+
+     The page must be served over https, which GoHighLevel and Netlify both
+     are. On plain http the location button will not work no matter what.
+
+     If your page has its own Meta Pixel, leave it. The calculator carries its
+     own too and the snippet above tells yours about the lead as well, so the
+     conversion lands in both.
+     --------------------------------------------------------------------------- -->
