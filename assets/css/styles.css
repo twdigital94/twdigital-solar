@@ -289,6 +289,16 @@ button { font: inherit; color: inherit; }
   font-size: .9rem; line-height: 1.35;
 }
 .suggest-item.is-active { background: var(--brand-wash); }
+.suggest-waiting {
+  padding: .55rem .7rem; font-size: .88rem; color: var(--ink-3);
+  display: flex; align-items: center; gap: .5rem;
+}
+.suggest-waiting::before {
+  content: ""; width: 11px; height: 11px; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--brand);
+  animation: suggest-spin .7s linear infinite;
+}
+@keyframes suggest-spin { to { transform: rotate(360deg); } }
 .suggest-item[aria-selected="true"] { background: var(--brand-wash); }
 
 .place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }

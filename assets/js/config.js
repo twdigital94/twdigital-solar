@@ -141,8 +141,15 @@ window.SOLAR_CONFIG = {
       googleApiKey: "",
 
       minCharacters: 4,
-      maxResults: 6,
-      debounceMs: 250,
+      maxResults: 6,      // how many to show
+
+      /* How many to actually fetch. Asking for more than we show means that
+         as someone keeps typing we can narrow the list in the browser rather
+         than going back to LINZ for every letter. Costs nothing extra on the
+         request and saves most of the round trips. */
+      fetchLimit: 30,
+
+      debounceMs: 200,
 
       /* Shows a short line under the address box saying whether suggestions
          are working and, if not, why. Set this to true while setting up a new

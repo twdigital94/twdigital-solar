@@ -174,6 +174,22 @@ type their address and carry on, and the installer still gets it.
 The suggestion list is a proper combobox: arrow keys move through it, Enter
 picks, Escape closes.
 
+**Speed.** LINZ hold 2.4 million address points and their server is in New
+Zealand, so a lookup is never instant. Three things keep that from being felt:
+
+- Each fetch asks for 30 rows while showing 6. If fewer than 30 come back we
+  know we have every match for that prefix, so as someone keeps typing the list
+  narrows in the browser instead of asking LINZ again. Typing a full street
+  name is one request rather than one per letter.
+- A new keystroke cancels the request the last one started.
+- A short waiting row appears if an answer takes more than a moment, so the box
+  is never silently doing nothing. Cached answers are instant and never show it.
+
+If it still drags, the remaining time is LINZ's own query and the round trip to
+New Zealand, neither of which can be fixed from the browser. Switching
+`provider` to `"google"` would be the answer, since their servers are closer and
+built for this.
+
 ### What this deliberately does not do
 
 Solar Scout follow their map with a LiDAR roof scan: three roof faces, pitch,

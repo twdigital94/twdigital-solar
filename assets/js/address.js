@@ -56,7 +56,7 @@ window.SolarAddress = (function () {
       return tpl
         .replace("{key}", encodeURIComponent(cfg.linzDataKey))
         .replace("{layer}", encodeURIComponent(cfg.linzLayerId))
-        .replace("{count}", String(cfg.maxResults))
+        .replace("{count}", String(cfg.fetchLimit))
         .replace(/\{query\}/g, encodeURIComponent(forMatching(query)));
     }
 
@@ -117,16 +117,49 @@ window.SolarAddress = (function () {
         : [cfg.linzUrlTemplate];
     }
 
+    /* Cache, so the same typing never costs two round trips.
+
+       Each fetch asks for more rows than we show. If that came back under the
+       limit we know we have every match for that prefix, so as someone keeps
+       typing we can narrow the list here instead of asking LINZ again.
+       Typing "12 priestley road" is then one request, not eight.
+
+       If a fetch came back AT the limit there may be more matches we never
+       saw, so narrowing locally could hide the right answer. In that case we
+       ask again. */
+    var cache = {};
+
+    function narrowLocally(needle) {
+      for (var len = needle.length; len >= cfg.minCharacters; len--) {
+        var hit = cache[needle.slice(0, len)];
+        if (hit && hit.complete) {
+          return hit.results.filter(function (r) {
+            return r.label.toLowerCase().indexOf(needle) === 0;
+          });
+        }
+      }
+      return null;
+    }
+
+    var inFlight = null;   // so a new keystroke can cancel the last request
+
     return function (query) {
       if (!cfg.linzDataKey) {
         report("No data.linz.govt.nz key set, so suggestions are off.");
         return Promise.resolve([]);
       }
 
+      var needle = forMatching(query).toLowerCase();
+
+      var local = narrowLocally(needle);
+      if (local) return Promise.resolve(local);
+
+      // Nothing usable cached, so go to LINZ. Drop the previous request
+      // rather than leaving it running against a reply nobody wants.
+      if (inFlight) { inFlight.abort(); inFlight = null; }
+
       if (chosen) {
-        return tryTemplate(chosen, query).then(function (r) {
-          return r.results || [];
-        });
+        return runFetch(chosen, query, needle);
       }
 
       if (!probing) {
@@ -154,6 +187,36 @@ window.SolarAddress = (function () {
       }
       return probing;
     };
+
+    function runFetch(tpl, query, needle) {
+      var controller = ("AbortController" in window) ? new AbortController() : null;
+      inFlight = controller;
+
+      return fetch(urlFor(tpl, query), controller ? { signal: controller.signal } : undefined)
+        .then(function (r) {
+          return r.text().then(function (body) {
+            if (!r.ok) return [];
+            try {
+              var results = parse(JSON.parse(body));
+              cache[needle] = {
+                results: results,
+                complete: results.length < cfg.fetchLimit
+              };
+              return results;
+            } catch (e) { return []; }
+          });
+        })
+        .catch(function (e) {
+          // An aborted request is us cancelling it, not a failure.
+          if (e.name === "AbortError") return [];
+          console.warn("[calculator] Address lookup failed:", e.message);
+          return [];
+        })
+        .then(function (results) {
+          if (inFlight === controller) inFlight = null;
+          return results;
+        });
+    }
 
     function report(message) {
       if (cfg.onStatus) cfg.onStatus(message);
@@ -313,15 +376,35 @@ window.SolarAddress = (function () {
           });
     }
 
+    /* A request that takes a moment with nothing on screen reads as broken.
+       This shows a waiting row, but only if the answer does not arrive almost
+       at once, so a cached result never flashes it. */
+    function showWaiting() {
+      if (!list.hidden && list.querySelector(".suggest-item")) return;
+      list.innerHTML = "";
+      var li = document.createElement("li");
+      li.className = "suggest-waiting";
+      li.textContent = "Looking up addresses\u2026";
+      list.appendChild(li);
+      list.hidden = false;
+      if (opts.onResize) opts.onResize();
+    }
+
     function run() {
       var q = input.value.trim();
       if (q.length < cfg.minCharacters) return close();
 
       var mine = ++seq;
+      var waiting = setTimeout(function () {
+        if (mine === seq) showWaiting();
+      }, 120);
+
       search(q).then(function (results) {
+        clearTimeout(waiting);
         if (mine !== seq) return;          // a newer keystroke already won
         show(results.slice(0, cfg.maxResults));
       }).catch(function (err) {
+        clearTimeout(waiting);
         if (mine !== seq) return;
         // Suggestions are a nicety. Losing them must not break anything.
         console.warn("[calculator] Address suggestions unavailable:", err.message);
