@@ -73,6 +73,12 @@
 
   function applyBrand() {
     const b = CFG.brand;
+
+    // How wide it may grow, so a client with a wide page can fill it.
+    if (CFG.maxWidth != null) {
+      document.documentElement.style.setProperty("--max-width",
+        CFG.maxWidth > 0 ? CFG.maxWidth + "px" : "none");
+    }
     const onBrand = b.onAccent || "#FFFFFF";
 
     // Paper colours come from the stylesheet; keep these two in step with it.

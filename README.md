@@ -45,6 +45,25 @@ The snippet handles the three things that otherwise go wrong with an iframe:
   silently does nothing. Verified across real origins: with the attribute the
   map jumps to the roof, without it the map never moves.
 
+### How wide it goes
+
+The calculator already reflows to whatever width it is given: one column with
+the answers so far shown as chips below about 800px, two columns above that.
+No horizontal scrolling at any size, checked from 360px up.
+
+It stops growing at `maxWidth` in `config.js`, 1120px by default, and centres
+itself beyond that, because a question and its answers get hard to read
+stretched across a very wide screen. Raise that number to fill a wider block,
+or set it to 0 for no limit.
+
+### Squarespace, and other editors that do not run scripts in preview
+
+The height adjusts because the calculator tells the hosting page how tall it
+is and a small script resizes the frame. Several site builders, Squarespace
+among them, do not run scripts inside their editor. The block will look stuck
+at a fixed height while you are editing and behave correctly on the published
+page. Always judge it on the live site, not in the editor.
+
 **Alternative, no iframe.** Run `node build.js` to produce `dist/index.html`,
 a single self-contained file. Paste its entire contents into the GHL custom-code
 element instead. Simpler, but you have to re-paste into every client's page

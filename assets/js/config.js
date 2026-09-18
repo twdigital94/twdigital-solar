@@ -60,6 +60,15 @@ window.SOLAR_CONFIG = {
     onAccent:   "#2B2B2B"   // text sitting ON the yellow. Their site uses near-black.
   },
 
+  /* --- Layout ---------------------------------------------------------------
+     How wide the calculator is allowed to grow. Past this it stops and
+     centres itself, because a question and its answers become hard to read
+     when they stretch across a very wide screen.
+
+     Raise it if you want it to fill a wide block on a client's site. Set it
+     to 0 for no limit at all, which fills whatever it is given.             */
+  maxWidth: 1120,
+
   /* --- Their fonts. ---------------------------------------------------------
      Any font on Google Fonts (fonts.google.com) works. Just type the family
      name exactly as it appears there. The page builds the load URL itself.
