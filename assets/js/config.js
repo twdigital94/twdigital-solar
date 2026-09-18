@@ -135,15 +135,8 @@ window.SOLAR_CONFIG = {
       /* Their exact query format could not be confirmed when this was built,
          so the calculator tries these in order on the first search and keeps
          whichever works. If LINZ tell you the right one, delete the rest. */
-      linzUrlTemplates: [
-        // The field holding the whole address is the remaining unknown, so
-        // these vary it. The first that returns addresses is kept and the
-        // others are never tried again.
-        wfs("full_address"),
-        wfs("full_address_ascii"),
-        wfs("address"),
-        wfs("full_road_name")
-      ],
+      // Confirmed against the live service: LINZ call the field full_address.
+      linzUrlTemplates: [ wfs("full_address") ],
 
       googleApiKey: "",
 
@@ -152,9 +145,9 @@ window.SOLAR_CONFIG = {
       debounceMs: 250,
 
       /* Shows a short line under the address box saying whether suggestions
-         are working and, if not, why. Useful while setting a client up.
-         Turn this off before the page goes in front of real traffic. */
-      debug: true
+         are working and, if not, why. Set this to true while setting up a new
+         client, then back to false. Homeowners should never see it. */
+      debug: false
     },
 
     // Make them position the pin before continuing. Leave false. An address
