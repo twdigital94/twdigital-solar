@@ -371,6 +371,9 @@
 
       const fallback = el("p", "place-note");
       fallback.hidden = true;
+
+      // Declared up here because the map's failure callback hides them.
+      let hint = null, locate = null;
       fallback.textContent =
         "The aerial photos are not loading just now. No bother, the address above is all we need.";
 
@@ -387,15 +390,25 @@
           updateRegionFromPin();
           renderRail();
         },
-        onUnavailable: () => { mapBox.hidden = true; fallback.hidden = false; }
+        onUnavailable: () => {
+          mapBox.hidden = true;
+          fallback.hidden = false;
+          if (hint) hint.hidden = true;
+          if (locate) locate.hidden = true;
+          reportHeight();
+        }
       });
 
       wrap.appendChild(fallback);
-      wrap.appendChild(el("p", "place-note",
-        "Drag the photo to line the pin up with your roof. Close enough is close enough."));
+
+      // Instructions for a map that isn't there just confuse people, so this
+      // goes when the map does.
+      hint = el("p", "place-note",
+        "Drag the photo to line the pin up with your roof. Close enough is close enough.");
+      wrap.appendChild(hint);
 
       if (cfg.offerGeolocation && navigator.geolocation) {
-        const locate = el("button", "btn-link", "Use my current location");
+        locate = el("button", "btn-link", "Use my current location");
         locate.type = "button";
         locate.addEventListener("click", () => {
           locate.textContent = "Finding you\u2026";
