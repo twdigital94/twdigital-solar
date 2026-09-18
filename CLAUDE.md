@@ -29,6 +29,13 @@ Run `node build.js` after changing anything, which regenerates the
 single-file `dist/index.html` used for previews and for pasting straight into
 GoHighLevel.
 
+## Secrets
+
+This repository is PUBLIC. No API keys, webhook URLs or client credentials go
+in it. `address.linzBasemapsKey` stays blank in the committed `config.js`; a
+key is passed in at build time with `LINZ_KEY=... node build.js` or set on the
+deployed copy only.
+
 ## Things not to break
 
 - Green loans are top-ups on an existing mortgage with that specific bank,

@@ -99,10 +99,29 @@ their place.
 Shows the homeowner an aerial photo of their place and asks them to drag it so
 the pin sits on their roof. Off by default until you give it a key.
 
-**To turn it on**, get a free LINZ Basemaps key from
-<https://basemaps.linz.govt.nz>, then paste it into `address.linzBasemapsKey`
-in `config.js`. Also set `address.defaultCentre` to the middle of that
-installer's patch, so the map opens somewhere useful.
+**To turn it on** you need a LINZ Basemaps key from
+<https://basemaps.linz.govt.nz>. Also set `address.defaultCentre` to the middle
+of that installer's patch, so the map opens somewhere useful.
+
+**Which LINZ key you need.** LINZ issue two kinds. The *individual* key you get
+straight from the site is, in their words, "for individual users", and they ask
+that shared or public tools use a free *Developer* key instead, which you
+request through the Contact us link on the same page. A calculator on a client's
+landing page taking paid traffic is a public tool, so it needs a Developer key
+before it goes live. An individual key is fine for clicking through it yourself.
+
+**Never commit a key to this repo, it is public.** Leave
+`address.linzBasemapsKey` blank in `config.js`. For a throwaway test build,
+pass the key in at build time instead:
+
+```
+LINZ_KEY=your-key-here OUT=preview.html node build.js
+```
+
+That writes a single file with the key baked in, which you can open directly in
+a browser. Don't commit it. For a real Netlify deploy, either paste the key into
+`config.js` on the deployed copy only, or set it as a Netlify build environment
+variable.
 
 **Be clear about what it does and doesn't do.** It does not make the estimate
 more accurate. The power bill drives system size far more than the roof does.
@@ -218,8 +237,9 @@ These were deliberate, and are worth not breaking:
   If they have a brand guide with exact hex codes, those should replace them.
 - No battery option yet. Worth adding once v1 is proven.
 - The map step has only been tested against a stand-in tile server, because
-  LINZ was unreachable from the build environment. Get a key and click
-  through it before putting it in front of paid traffic.
+  LINZ is unreachable from the build environment. Click through it with a real
+  key before putting it in front of paid traffic.
+- A LINZ Developer API key needs requesting before launch. See above.
 - Region detection from the pin uses nearest-town, checked against 27 NZ
   towns. It could still pick the neighbouring region right on a boundary,
   which would shift the sunshine figure slightly.
