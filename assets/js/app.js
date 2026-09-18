@@ -416,12 +416,33 @@
           locate.textContent = "Finding you\u2026";
           navigator.geolocation.getCurrentPosition(
             pos => {
-              map.setCentre(pos.coords.latitude, pos.coords.longitude, cfg.roofZoom);
+              const lat = pos.coords.latitude, lon = pos.coords.longitude;
+              const b = cfg.serviceBounds;
+
+              // A phone can report a location anywhere. Sending the map to
+              // one we have no imagery for would leave someone staring at a
+              // blank square wondering what they broke.
+              const inNZ = !b || (lat >= b.minLat && lat <= b.maxLat &&
+                                  lon >= b.minLon && lon <= b.maxLon);
+              if (!inNZ) {
+                locate.textContent = "That doesn't look like a New Zealand address, so type it above";
+                locate.disabled = true;
+                reportHeight();
+                return;
+              }
+
+              map.setCentre(lat, lon, cfg.roofZoom);
+              answers.place.lat = lat;
+              answers.place.lon = lon;
+              answers.place.positioned = true;
+              updateRegionFromPin();
+              renderRail();
               locate.textContent = "Use my current location";
             },
             () => {
               locate.textContent = "Couldn't find you, just type it above instead";
               locate.disabled = true;
+              reportHeight();
             },
             { enableHighAccuracy: true, timeout: 8000 }
           );

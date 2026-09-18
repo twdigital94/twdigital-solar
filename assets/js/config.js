@@ -4,13 +4,20 @@
    Everything else (the NZ data, the maths, the design) is shared.
    ============================================================================ */
 
-/* Builds a LINZ Data Service WFS query for one address field. Declared out
-   here because the config below uses it four times over. */
-function wfs(field) {
+/* Builds a LINZ Data Service WFS query.
+
+   `only` asks the server to send just that column instead of every field on
+   the record. The address layer carries a lot of columns we never look at, so
+   this can cut the reply down sharply. It is tried first, with the full
+   version behind it: if trimming also drops the coordinates, the lean reply
+   has nothing usable in it and the calculator falls through to the full one
+   by itself. */
+function wfs(field, only) {
   return "https://data.linz.govt.nz/services;key={key}/wfs" +
          "?service=WFS&version=2.0.0&request=GetFeature" +
          "&typeNames=layer-{layer}&outputFormat=application/json" +
          "&count={count}&srsName=EPSG:4326" +
+         (only ? "&propertyName=" + only : "") +
          "&cql_filter=" + field + "+ILIKE+%27{query}%25%27";
 }
 
@@ -113,6 +120,12 @@ window.SOLAR_CONFIG = {
     // saves a lot of typing, but it does trigger a browser permission prompt.
     offerGeolocation: true,
 
+    /* Roughly New Zealand. A phone can report a location anywhere on earth,
+       including from a VPN or someone genuinely overseas, and sending the map
+       there would land it on blank tiles with no explanation. Outside these
+       bounds we leave the map alone and say why. */
+    serviceBounds: { minLat: -47.5, maxLat: -34.0, minLon: 166.0, maxLon: 179.5 },
+
     /* Address suggestions as they type. Picking one moves the map to it.
        Set provider to "off" to just let people type.
 
@@ -136,18 +149,26 @@ window.SOLAR_CONFIG = {
          so the calculator tries these in order on the first search and keeps
          whichever works. If LINZ tell you the right one, delete the rest. */
       // Confirmed against the live service: LINZ call the field full_address.
-      linzUrlTemplates: [ wfs("full_address") ],
+      // Lean version first, full version as the fallback.
+      linzUrlTemplates: [
+        wfs("full_address", "full_address,shape"),
+        wfs("full_address", "full_address,geom"),
+        wfs("full_address")
+      ],
 
       googleApiKey: "",
 
-      minCharacters: 4,
+      /* Six rather than four. "12 P" matches a large chunk of the country and
+         makes LINZ work harder for a list nobody could use anyway. "12 Pri"
+         is a far cheaper question and the suggestions are actually relevant. */
+      minCharacters: 6,
       maxResults: 6,      // how many to show
 
       /* How many to actually fetch. Asking for more than we show means that
          as someone keeps typing we can narrow the list in the browser rather
          than going back to LINZ for every letter. Costs nothing extra on the
          request and saves most of the round trips. */
-      fetchLimit: 30,
+      fetchLimit: 20,
 
       debounceMs: 200,
 

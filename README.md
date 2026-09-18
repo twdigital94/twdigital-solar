@@ -185,10 +185,23 @@ Zealand, so a lookup is never instant. Three things keep that from being felt:
 - A short waiting row appears if an answer takes more than a moment, so the box
   is never silently doing nothing. Cached answers are instant and never show it.
 
+Two more things trim it. Suggestions start at six characters rather than four,
+because "12 P" matches a large part of the country and makes LINZ work hard for
+a list nobody could use. And the first query asks for only the address column
+instead of every field on the record, with the full query behind it in case
+trimming also drops the coordinates.
+
 If it still drags, the remaining time is LINZ's own query and the round trip to
 New Zealand, neither of which can be fixed from the browser. Switching
-`provider` to `"google"` would be the answer, since their servers are closer and
-built for this.
+`provider` to `"google"` is then the answer, since their servers are closer to
+the visitor and built for exactly this.
+
+**Testing "use my location" from outside New Zealand.** The button checks the
+reported position against `address.serviceBounds` and refuses to move the map
+if it falls outside the country, since there is no imagery there and a blank
+square explains nothing. To test the working path from overseas, use Chrome's
+device tools to report a New Zealand position: F12, then the three dots menu,
+More tools, Sensors, and set a custom location.
 
 ### What this deliberately does not do
 
