@@ -154,10 +154,12 @@ Two providers, because they trade off differently:
 - **`linz`** is free and New Zealand only, which suits the audience exactly. It
   needs a key from <https://data.linz.govt.nz>. That is a **different key** from
   the Basemaps imagery one, from a different LINZ service. Easy to conflate.
-  Their exact query format could not be confirmed when this was built, so
-  `linzUrlTemplates` holds several candidates. The calculator tries each on the
-  first search and keeps whichever returns addresses. Once you know which one
-  works, delete the others.
+  The layer is **123113, NZ Addresses**, the 2.4 million point layer. The two
+  other similarly named LINZ layers are road centrelines and are no use for
+  finding a house. The field holding the whole address was still unconfirmed
+  when this was written, so `linzUrlTemplates` holds one candidate per likely
+  field name. The calculator tries each on the first search and keeps whichever
+  returns addresses. Once you know which works, delete the others.
 - **`google`** costs a few dollars per thousand lookups but copes far better
   with half-typed, misspelled and informal addresses. On paid traffic that
   usually pays for itself, since every abandoned address box is a lost lead.

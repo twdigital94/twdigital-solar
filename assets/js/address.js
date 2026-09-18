@@ -39,12 +39,25 @@ window.SolarAddress = (function () {
     var chosen = null;      // the template that worked
     var probing = null;     // the in-flight probe, so parallel keystrokes share it
 
+    /* Match on what comes before the first comma.
+
+       People type the whole thing: "12 priestley road, napier, hawkes bay".
+       LINZ store it as "12 Priestley Road, Bluff Hill, Napier", so matching
+       the full string finds nothing, because the suburb someone types is
+       rarely the one on the official record. Matching "12 priestley road"
+       returns every candidate and the list lets them pick the right one. */
+    function forMatching(query) {
+      var head = query.split(",")[0].trim();
+      return (head.length >= cfg.minCharacters ? head : query.trim())
+        .replace(/'/g, "''");
+    }
+
     function urlFor(tpl, query) {
       return tpl
         .replace("{key}", encodeURIComponent(cfg.linzDataKey))
         .replace("{layer}", encodeURIComponent(cfg.linzLayerId))
         .replace("{count}", String(cfg.maxResults))
-        .replace(/\{query\}/g, encodeURIComponent(query.replace(/'/g, "''")));
+        .replace(/\{query\}/g, encodeURIComponent(forMatching(query)));
     }
 
     function parse(data) {
@@ -65,12 +78,16 @@ window.SolarAddress = (function () {
        Never rejects: a failed candidate is data, not an error. */
     function tryTemplate(tpl, query) {
       return fetch(urlFor(tpl, query)).then(function (r) {
-        if (!r.ok) return { why: "HTTP " + r.status };
-        return r.json().then(function (data) {
-          var results = parse(data);
-          return results.length ? { results: results } : { why: "no matches" };
-        }).catch(function () {
-          return { why: "reply was not the JSON we expected" };
+        return r.text().then(function (body) {
+          if (!r.ok) return { why: "HTTP " + r.status + ", " + explain(body) };
+          try {
+            var results = parse(JSON.parse(body));
+            return results.length ? { results: results } : { why: "no matches" };
+          } catch (e) {
+            // A WFS that dislikes the query answers in XML, and that XML says
+            // exactly what it disliked. Far more use than "not JSON".
+            return { why: explain(body) };
+          }
         });
       }).catch(function (e) {
         // fetch only rejects on a network-level failure, which for a browser
@@ -78,6 +95,20 @@ window.SolarAddress = (function () {
         // allow the request at all.
         return { why: "blocked before it reached LINZ (" + e.message + ")" };
       });
+    }
+
+    /* WFS puts its real complaint in the response body rather than the status
+       line, so dig the sentence out of the XML. */
+    function explain(body) {
+      var m = body.match(/<ows:ExceptionText>([\s\S]*?)<\/ows:ExceptionText>/i)
+           || body.match(/<ExceptionText>([\s\S]*?)<\/ExceptionText>/i);
+      if (m) return m[1].trim().replace(/\s+/g, " ").slice(0, 160);
+      try {
+        var j = JSON.parse(body);
+        if (j.error || j.detail || j.message) return j.error || j.detail || j.message;
+      } catch (e) {}
+      return body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160)
+             || "empty reply";
     }
 
     function candidates() {

@@ -4,6 +4,16 @@
    Everything else (the NZ data, the maths, the design) is shared.
    ============================================================================ */
 
+/* Builds a LINZ Data Service WFS query for one address field. Declared out
+   here because the config below uses it four times over. */
+function wfs(field) {
+  return "https://data.linz.govt.nz/services;key={key}/wfs" +
+         "?service=WFS&version=2.0.0&request=GetFeature" +
+         "&typeNames=layer-{layer}&outputFormat=application/json" +
+         "&count={count}&srsName=EPSG:4326" +
+         "&cql_filter=" + field + "+ILIKE+%27{query}%25%27";
+}
+
 window.SOLAR_CONFIG = {
 
   /* --- The installer's details. Shown in the header and on the results page. --- */
@@ -120,36 +130,19 @@ window.SOLAR_CONFIG = {
       // From data.linz.govt.nz. This is a DIFFERENT key from the Basemaps
       // imagery one above, from a different LINZ service. Easy to mix up.
       linzDataKey: "",
-      linzLayerId: "105689",     // NZ Street Address
+      linzLayerId: "123113",     // NZ Addresses, the 2.4M point layer
 
       /* Their exact query format could not be confirmed when this was built,
          so the calculator tries these in order on the first search and keeps
          whichever works. If LINZ tell you the right one, delete the rest. */
       linzUrlTemplates: [
-        // WFS 2.0, ASCII address field
-        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
-        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
-        "&count={count}&srsName=EPSG:4326" +
-        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27",
-
-        // WFS 2.0, plain address field
-        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
-        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
-        "&count={count}&srsName=EPSG:4326" +
-        "&cql_filter=full_address+ILIKE+%27{query}%25%27",
-
-        // WFS 1.1, which uses typeName and maxFeatures rather than typeNames
-        // and count
-        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=1.1.0" +
-        "&request=GetFeature&typeName=layer-{layer}&outputFormat=application/json" +
-        "&maxFeatures={count}&srsName=EPSG:4326" +
-        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27",
-
-        // Key as a query parameter rather than in the path
-        "https://data.linz.govt.nz/services/wfs?key={key}&service=WFS&version=2.0.0" +
-        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
-        "&count={count}&srsName=EPSG:4326" +
-        "&cql_filter=full_address_ascii+ILIKE+%27{query}%25%27"
+        // The field holding the whole address is the remaining unknown, so
+        // these vary it. The first that returns addresses is kept and the
+        // others are never tried again.
+        wfs("full_address"),
+        wfs("full_address_ascii"),
+        wfs("address"),
+        wfs("full_road_name")
       ],
 
       googleApiKey: "",
