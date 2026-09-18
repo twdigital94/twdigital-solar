@@ -270,6 +270,27 @@ button { font: inherit; color: inherit; }
   border-top-left-radius: 5px; pointer-events: none;
 }
 
+
+/* --- Address suggestions --------------------------------------------------
+   Sits under the address box. The field needs position:relative for this to
+   anchor, which is why .place .field carries it.                          */
+.place .field { position: relative; }
+
+.suggest {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  margin: 4px 0 0; padding: 4px; list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 260px; overflow-y: auto;
+}
+.suggest-item {
+  padding: .55rem .7rem; border-radius: 6px; cursor: pointer;
+  font-size: .9rem; line-height: 1.35;
+}
+.suggest-item.is-active { background: var(--brand-wash); }
+.suggest-item[aria-selected="true"] { background: var(--brand-wash); }
+
 .place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }
 /* Flex column would otherwise stretch these full width. */
 .place > .btn-link { align-self: flex-start; }

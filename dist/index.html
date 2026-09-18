@@ -116,6 +116,35 @@ window.SOLAR_CONFIG = {
     // saves a lot of typing, but it does trigger a browser permission prompt.
     offerGeolocation: true,
 
+    /* Address suggestions as they type. Picking one moves the map to it.
+       Set provider to "off" to just let people type.
+
+       "linz"   Free, New Zealand only. Needs a key from data.linz.govt.nz,
+                which is a DIFFERENT key from the Basemaps imagery one above.
+       "google" A few dollars per thousand lookups, but it handles half-typed
+                and misspelled addresses far better, which on paid traffic
+                usually pays for itself.
+
+       If the provider is missing or down, suggestions quietly stop and the
+       box goes back to being a plain text field.                          */
+    search: {
+      provider: "linz",          // "linz", "google" or "off"
+
+      linzDataKey: "",           // data.linz.govt.nz, not basemaps.linz.govt.nz
+      linzLayerId: "105689",     // NZ Street Address
+      linzUrlTemplate:
+        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
+        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
+        "&count={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address_ascii%20ILIKE%20%27{query}%25%27",
+
+      googleApiKey: "",
+
+      minCharacters: 4,
+      maxResults: 6,
+      debounceMs: 250
+    },
+
     // Make them position the pin before continuing. Leave false. An address
     // is nice to have, and never worth losing a lead over.
     required: false
@@ -546,6 +575,27 @@ button { font: inherit; color: inherit; }
   background: rgba(255,255,255,.82); color: #2B2B2B;
   border-top-left-radius: 5px; pointer-events: none;
 }
+
+
+/* --- Address suggestions --------------------------------------------------
+   Sits under the address box. The field needs position:relative for this to
+   anchor, which is why .place .field carries it.                          */
+.place .field { position: relative; }
+
+.suggest {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+  margin: 4px 0 0; padding: 4px; list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 260px; overflow-y: auto;
+}
+.suggest-item {
+  padding: .55rem .7rem; border-radius: 6px; cursor: pointer;
+  font-size: .9rem; line-height: 1.35;
+}
+.suggest-item.is-active { background: var(--brand-wash); }
+.suggest-item[aria-selected="true"] { background: var(--brand-wash); }
 
 .place-note { font-size: .8rem; color: var(--ink-2); margin: 0; }
 /* Flex column would otherwise stretch these full width. */
@@ -1062,6 +1112,260 @@ window.SolarMap = (function () {
     create: create,
     lonToX: lonToX, latToY: latToY, xToLon: xToLon, yToLat: yToLat
   };
+})();
+
+</script>
+<script>
+/* ============================================================================
+   Address suggestions.
+
+   Turns the plain address box into a search: type a few characters, pick your
+   place from a list, and the map jumps to it.
+
+   Two providers, because they trade off differently:
+
+     "linz"   Free, and New Zealand only, which is exactly our audience.
+              Uses the LINZ Data Service, a separate key from the Basemaps one.
+     "google" Costs a few dollars per thousand lookups, but it is the search
+              people are used to and it copes with half-typed, misspelled and
+              informal addresses far better.
+
+   Either way, if the provider is missing, misconfigured or simply down, the
+   suggestions stop appearing and the box goes back to being a plain text
+   field. Someone can always type their address and carry on.
+   ============================================================================ */
+
+window.SolarAddress = (function () {
+  "use strict";
+
+  /* --- Providers -----------------------------------------------------------
+     Each takes a search string and returns a promise of
+     [{ label, lat, lon }]. Anything that throws is treated as "no suggestions".
+  ------------------------------------------------------------------------- */
+  var providers = {};
+
+  /* LINZ Data Service. Queries the national street address layer.
+     Needs a key from data.linz.govt.nz, which is NOT the same key as the
+     Basemaps imagery one. */
+  providers.linz = function (cfg) {
+    return function (query) {
+      var safe = query.replace(/'/g, "''");
+      var url = cfg.linzUrlTemplate
+        .replace("{key}", encodeURIComponent(cfg.linzDataKey))
+        .replace("{layer}", encodeURIComponent(cfg.linzLayerId))
+        .replace("{count}", String(cfg.maxResults))
+        .replace("{query}", encodeURIComponent(safe));
+
+      return fetch(url).then(function (r) {
+        if (!r.ok) throw new Error("LINZ address search: HTTP " + r.status);
+        return r.json();
+      }).then(function (data) {
+        return (data.features || []).map(function (f) {
+          var p = f.properties || {};
+          var c = (f.geometry && f.geometry.coordinates) || [];
+          return {
+            label: p.full_address || p.full_address_ascii || p.address || "",
+            lon: c[0], lat: c[1]
+          };
+        }).filter(function (s) {
+          return s.label && typeof s.lat === "number" && typeof s.lon === "number";
+        });
+      });
+    };
+  };
+
+  /* Google Places. Loads their script once, then asks for predictions and
+     resolves the chosen one to coordinates. */
+  providers.google = function (cfg) {
+    var ready = null;
+
+    function load() {
+      if (ready) return ready;
+      ready = new Promise(function (resolve, reject) {
+        if (window.google && window.google.maps && window.google.maps.places) {
+          return resolve();
+        }
+        var s = document.createElement("script");
+        s.src = "https://maps.googleapis.com/maps/api/js?libraries=places&key=" +
+                encodeURIComponent(cfg.googleApiKey);
+        s.async = true;
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error("Google Places failed to load")); };
+        document.head.appendChild(s);
+      });
+      return ready;
+    }
+
+    return function (query) {
+      return load().then(function () {
+        var svc = new window.google.maps.places.AutocompleteService();
+        return new Promise(function (resolve) {
+          svc.getPlacePredictions(
+            { input: query, componentRestrictions: { country: "nz" } },
+            function (predictions, status) {
+              if (status !== "OK" || !predictions) return resolve([]);
+              resolve(predictions.slice(0, cfg.maxResults).map(function (p) {
+                return { label: p.description, placeId: p.place_id };
+              }));
+            }
+          );
+        });
+      });
+    };
+  };
+
+  /* Google gives coordinates only once a suggestion is picked, so it needs a
+     second step the LINZ provider does not. */
+  function resolveGoogle(choice) {
+    return new Promise(function (resolve, reject) {
+      var geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ placeId: choice.placeId }, function (results, status) {
+        if (status !== "OK" || !results || !results[0]) {
+          return reject(new Error("Could not place that address"));
+        }
+        var loc = results[0].geometry.location;
+        resolve({ label: choice.label, lat: loc.lat(), lon: loc.lng() });
+      });
+    });
+  }
+
+  /* --- The widget ----------------------------------------------------------
+     Wires a suggestion list under an existing text input. Built as a proper
+     ARIA combobox so it works with a keyboard and a screen reader, not only
+     a mouse.
+  ------------------------------------------------------------------------- */
+  function attach(input, opts) {
+    var cfg = opts.config;
+    var onPick = opts.onPick;
+    var search = providers[cfg.provider] && providers[cfg.provider](cfg);
+    if (!search) return null;
+
+    var list = document.createElement("ul");
+    list.className = "suggest";
+    list.id = input.id + "-suggestions";
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    input.parentNode.appendChild(list);
+
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-expanded", "false");
+    input.setAttribute("aria-controls", list.id);
+    input.setAttribute("aria-autocomplete", "list");
+    input.autocomplete = "off";
+
+    var items = [];        // current suggestions
+    var active = -1;       // highlighted index
+    var timer = null;
+    var seq = 0;           // drops results from stale requests
+    var suppress = false;  // stops the box re-searching right after a pick
+
+    function close() {
+      list.hidden = true;
+      list.innerHTML = "";
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      items = [];
+      active = -1;
+      if (opts.onResize) opts.onResize();
+    }
+
+    function highlight(i) {
+      var nodes = list.querySelectorAll(".suggest-item");
+      for (var n = 0; n < nodes.length; n++) {
+        var on = n === i;
+        nodes[n].setAttribute("aria-selected", String(on));
+        nodes[n].classList.toggle("is-active", on);
+      }
+      active = i;
+      if (i >= 0 && nodes[i]) {
+        input.setAttribute("aria-activedescendant", nodes[i].id);
+        nodes[i].scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    function show(results) {
+      items = results;
+      list.innerHTML = "";
+      if (!results.length) return close();
+
+      results.forEach(function (s, i) {
+        var li = document.createElement("li");
+        li.className = "suggest-item";
+        li.id = list.id + "-" + i;
+        li.setAttribute("role", "option");
+        li.setAttribute("aria-selected", "false");
+        li.textContent = s.label;
+        // mousedown, not click: the input blurs before a click lands.
+        li.addEventListener("mousedown", function (e) { e.preventDefault(); pick(i); });
+        li.addEventListener("mouseenter", function () { highlight(i); });
+        list.appendChild(li);
+      });
+
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      active = -1;
+      if (opts.onResize) opts.onResize();
+    }
+
+    function pick(i) {
+      var choice = items[i];
+      if (!choice) return;
+      suppress = true;
+      input.value = choice.label;
+      close();
+
+      var done = choice.placeId
+        ? resolveGoogle(choice)
+        : Promise.resolve(choice);
+
+      done.then(function (place) { onPick(place); })
+          .catch(function (err) {
+            // Still keep the typed address; only the pin move is lost.
+            console.warn("[calculator] " + err.message);
+            onPick({ label: choice.label });
+          });
+    }
+
+    function run() {
+      var q = input.value.trim();
+      if (q.length < cfg.minCharacters) return close();
+
+      var mine = ++seq;
+      search(q).then(function (results) {
+        if (mine !== seq) return;          // a newer keystroke already won
+        show(results.slice(0, cfg.maxResults));
+      }).catch(function (err) {
+        if (mine !== seq) return;
+        // Suggestions are a nicety. Losing them must not break anything.
+        console.warn("[calculator] Address suggestions unavailable:", err.message);
+        close();
+      });
+    }
+
+    input.addEventListener("input", function () {
+      if (suppress) { suppress = false; return; }
+      clearTimeout(timer);
+      timer = setTimeout(run, cfg.debounceMs);
+    });
+
+    input.addEventListener("keydown", function (e) {
+      if (list.hidden) {
+        if (e.key === "ArrowDown") { clearTimeout(timer); run(); }
+        return;
+      }
+      if (e.key === "ArrowDown")      { e.preventDefault(); highlight((active + 1) % items.length); }
+      else if (e.key === "ArrowUp")   { e.preventDefault(); highlight((active - 1 + items.length) % items.length); }
+      else if (e.key === "Enter")     { if (active >= 0) { e.preventDefault(); pick(active); } }
+      else if (e.key === "Escape")    { close(); }
+      else if (e.key === "Tab")       { close(); }
+    });
+
+    input.addEventListener("blur", function () { setTimeout(close, 120); });
+
+    return { close: close };
+  }
+
+  return { attach: attach, providers: Object.keys(providers) };
 })();
 
 </script>
@@ -1664,6 +1968,8 @@ window.SolarCalc = (function () {
     field.appendChild(input);
     wrap.appendChild(field);
 
+    const searchCfg = cfg.search || { provider: "off" };
+
     let map = null;
     if (hasImagery) {
       const mapBox = el("div");
@@ -1747,6 +2053,30 @@ window.SolarCalc = (function () {
     backBtn.addEventListener("click", back);
     actions.appendChild(backBtn);
     q.appendChild(actions);
+
+    /* Suggestions, once the map exists so a pick can move it. */
+    if (searchCfg.provider && searchCfg.provider !== "off" && window.SolarAddress) {
+      window.SolarAddress.attach(input, {
+        config: searchCfg,
+        onResize: reportHeight,
+        onPick: place => {
+          answers.place.label = place.label;
+          input.value = place.label;
+
+          // A provider that gives coordinates moves the pin. One that does not
+          // still fills the address in, which is the part the installer reads.
+          if (typeof place.lat === "number" && typeof place.lon === "number") {
+            answers.place.lat = place.lat;
+            answers.place.lon = place.lon;
+            answers.place.positioned = true;
+            if (map) map.setCentre(place.lat, place.lon, cfg.roofZoom);
+            updateRegionFromPin();
+          }
+          renderRail();
+          reportHeight();
+        }
+      });
+    }
 
     // Tiles need the container's real size, which it only has once laid out.
     if (map) requestAnimationFrame(() => { map.redraw(); reportHeight(); });

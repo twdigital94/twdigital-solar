@@ -364,6 +364,8 @@
     field.appendChild(input);
     wrap.appendChild(field);
 
+    const searchCfg = cfg.search || { provider: "off" };
+
     let map = null;
     if (hasImagery) {
       const mapBox = el("div");
@@ -447,6 +449,30 @@
     backBtn.addEventListener("click", back);
     actions.appendChild(backBtn);
     q.appendChild(actions);
+
+    /* Suggestions, once the map exists so a pick can move it. */
+    if (searchCfg.provider && searchCfg.provider !== "off" && window.SolarAddress) {
+      window.SolarAddress.attach(input, {
+        config: searchCfg,
+        onResize: reportHeight,
+        onPick: place => {
+          answers.place.label = place.label;
+          input.value = place.label;
+
+          // A provider that gives coordinates moves the pin. One that does not
+          // still fills the address in, which is the part the installer reads.
+          if (typeof place.lat === "number" && typeof place.lon === "number") {
+            answers.place.lat = place.lat;
+            answers.place.lon = place.lon;
+            answers.place.positioned = true;
+            if (map) map.setCentre(place.lat, place.lon, cfg.roofZoom);
+            updateRegionFromPin();
+          }
+          renderRail();
+          reportHeight();
+        }
+      });
+    }
 
     // Tiles need the container's real size, which it only has once laid out.
     if (map) requestAnimationFrame(() => { map.redraw(); reportHeight(); });

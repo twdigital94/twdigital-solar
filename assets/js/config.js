@@ -103,6 +103,35 @@ window.SOLAR_CONFIG = {
     // saves a lot of typing, but it does trigger a browser permission prompt.
     offerGeolocation: true,
 
+    /* Address suggestions as they type. Picking one moves the map to it.
+       Set provider to "off" to just let people type.
+
+       "linz"   Free, New Zealand only. Needs a key from data.linz.govt.nz,
+                which is a DIFFERENT key from the Basemaps imagery one above.
+       "google" A few dollars per thousand lookups, but it handles half-typed
+                and misspelled addresses far better, which on paid traffic
+                usually pays for itself.
+
+       If the provider is missing or down, suggestions quietly stop and the
+       box goes back to being a plain text field.                          */
+    search: {
+      provider: "linz",          // "linz", "google" or "off"
+
+      linzDataKey: "",           // data.linz.govt.nz, not basemaps.linz.govt.nz
+      linzLayerId: "105689",     // NZ Street Address
+      linzUrlTemplate:
+        "https://data.linz.govt.nz/services;key={key}/wfs?service=WFS&version=2.0.0" +
+        "&request=GetFeature&typeNames=layer-{layer}&outputFormat=application/json" +
+        "&count={count}&srsName=EPSG:4326" +
+        "&cql_filter=full_address_ascii%20ILIKE%20%27{query}%25%27",
+
+      googleApiKey: "",
+
+      minCharacters: 4,
+      maxResults: 6,
+      debounceMs: 250
+    },
+
     // Make them position the pin before continuing. Leave false. An address
     // is nice to have, and never worth losing a lead over.
     required: false

@@ -144,6 +144,30 @@ nice to have and is never worth losing a lead over, which is why
 **No mapping library.** The map is about 200 lines in `assets/js/map.js` with
 no dependencies, so there's no CDN to go down and nothing to keep updated.
 
+### Address suggestions
+
+Typing in the address box offers suggestions, and picking one moves the map to
+that address. Configured under `address.search` in `config.js`.
+
+Two providers, because they trade off differently:
+
+- **`linz`** is free and New Zealand only, which suits the audience exactly. It
+  needs a key from <https://data.linz.govt.nz>. That is a **different key** from
+  the Basemaps imagery one, from a different LINZ service. Easy to conflate.
+- **`google`** costs a few dollars per thousand lookups but copes far better
+  with half-typed, misspelled and informal addresses. On paid traffic that
+  usually pays for itself, since every abandoned address box is a lost lead.
+  Needs a Google Cloud key with the Places API enabled.
+
+Set `provider` to `"off"` to just let people type.
+
+If the provider is missing, misconfigured or down, suggestions quietly stop
+appearing and the box goes back to being a plain text field. Someone can always
+type their address and carry on, and the installer still gets it.
+
+The suggestion list is a proper combobox: arrow keys move through it, Enter
+picks, Escape closes.
+
 ### What this deliberately does not do
 
 Solar Scout follow their map with a LiDAR roof scan: three roof faces, pitch,
@@ -182,6 +206,7 @@ the payload to the browser console instead.
 | `assets/js/calculator.js` | The maths. Pure calculation, no page code. |
 | `assets/js/app.js` | The question flow and the results page. |
 | `assets/js/map.js` | The aerial map. No libraries, no CDN. |
+| `assets/js/address.js` | Address suggestions, and the providers behind them. |
 | `assets/css/styles.css` | All styling. Re-skins from the brand colour in config, so you shouldn't need to touch this. |
 | `embed/ghl-snippet.html` | Paste into GoHighLevel. |
 | `build.js` | Bundles everything into one file (`node build.js`). |
@@ -236,9 +261,10 @@ These were deliberate, and are worth not breaking:
 - Solar Colab's brand colours are eyeballed from a screenshot of their site.
   If they have a brand guide with exact hex codes, those should replace them.
 - No battery option yet. Worth adding once v1 is proven.
-- The map step has only been tested against a stand-in tile server, because
-  LINZ is unreachable from the build environment. Click through it with a real
-  key before putting it in front of paid traffic.
+- Address suggestions have only been tested against a stand-in service, since
+  LINZ is unreachable from the build environment. The LINZ query URL in
+  `config.js` is a best guess at their WFS format and may need correcting
+  against the real service.
 - A LINZ Developer API key needs requesting before launch. See above.
 - Region detection from the pin uses nearest-town, checked against 27 NZ
   towns. It could still pick the neighbouring region right on a boundary,
