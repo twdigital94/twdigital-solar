@@ -77,7 +77,10 @@ window.SOLAR_CONFIG = {
   fonts: {
     display: { family: "Baloo 2",       weights: [500, 600, 700] },
     body:    { family: "Inter",         weights: [400, 600, 700] },
-    mono:    { family: "IBM Plex Mono", weights: [400, 500] },
+    /* Roboto Mono rather than IBM Plex Mono: Plex puts a dot inside its zero
+       to tell 0 from O, which is sensible in code and looks like a blemish on
+       a $280 readout four centimetres tall. */
+    mono:    { family: "Roboto Mono", weights: [400, 500] },
     customCssUrl: ""
   },
 

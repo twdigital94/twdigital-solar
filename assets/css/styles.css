@@ -104,6 +104,13 @@ button { font: inherit; color: inherit; }
 
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
+/* Belt and braces against a dotted or slashed zero. Harmless on a face whose
+   plain zero is already the default. */
+.mono, .bill-readout, .figure-value, .card-figure, .rail-value,
+.bar-value, .row-url, .assumptions td:last-child {
+  font-feature-settings: "zero" 0;
+}
+
 .eyebrow {
   font-family: var(--mono);
   font-size: .7rem;
